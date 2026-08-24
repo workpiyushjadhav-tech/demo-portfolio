@@ -1,0 +1,213 @@
+{
+  "visual": {
+    "navbar": {
+      "links": [
+        {
+          "label": "Experience",
+          "path": "#experience"
+        },
+        {
+          "label": "Projects",
+          "path": "#projects"
+        },
+        {
+          "label": "Education",
+          "path": "#education"
+        },
+        {
+          "label": "Testimonials",
+          "path": "#testimonials"
+        }
+      ]
+    },
+    "home": {
+      "sections": {
+        "banner": true,
+        "experience": true,
+        "project": true,
+        "education": true,
+        "testimonial": true
+      }
+    }
+  },
+  "personalInfo": {
+    "name": "Arif Hossain",
+    "title": "Full Stack Developer",
+    "location": "Dhaka, Bangladesh",
+    "bio": "I am a passionate full-stack developer with a strong background in building modern, scalable web applications. Lets collaborate andbring your ideas to life."
+  },
+  "contactInfo": {
+    "email": "devarifhossain@gmail.com",
+    "phone": "123-456-7890",
+    "linkedin": "#!",
+    "github": "#!",
+    "twitter": "#!",
+    "website": "#!"
+  },
+  "skills": {
+    "languages": [
+      "JavaScript",
+      "Python",
+      "Java",
+      "C++"
+    ],
+    "frameworks": [
+      "React",
+      "Node.js",
+      "Express",
+      "Django",
+      "Spring Boot"
+    ],
+    "databases": [
+      "MySQL",
+      "MongoDB",
+      "PostgreSQL"
+    ],
+    "tools": [
+      "Git",
+      "Docker",
+      "Kubernetes",
+      "Jenkins",
+      "AWS",
+      "GCP"
+    ]
+  },
+  "projects": [
+    {
+      "id": "0",
+      "title": "BlinkIT Grocery Sales Performance Dashboard",
+      "description": "An interactive, single-file recreation of a Power BI grocery analytics report. Built directly from the underlying .pbix data model, it replicates real-time cross-filtering across KPI cards, charts and a pivot table, with keyboard-accessible controls that meet WCAG 2.1 AA contrast standards.",
+      "technologies": [
+        "HTML5",
+        "Tailwind CSS",
+        "Chart.js",
+        "Vanilla JS"
+      ],
+      "live_url": "#!",
+      "code_repo_url": "#!",
+      "cover": "/assets/project_4.jpeg"
+    },
+    {
+      "id": "1",
+      "title": "Makers Tracker",
+      "description": "A project goal tracking tool for professionals. It let's you create project, assign goals and generate analytics to track progress",
+      "technologies": [
+        "Typescript",
+        "Next.js",
+        "TailwindCSS",
+        "MySQL"
+      ],
+      "live_url": "#!",
+      "code_repo_url": "#!",
+      "cover": "/assets/project_1.jpeg"
+    },
+    {
+      "id": "2",
+      "title": "Pricing Bees",
+      "description": "A no-code pricing page builder. Build professional-looking pricing pages, customize looks, and get detailed analytics to optimize your pricing strategy.",
+      "technologies": [
+        "Typescript",
+        "Next.js",
+        "Shadcn/ui",
+        "Convex"
+      ],
+      "live_url": "#!",
+      "code_repo_url": "#!",
+      "cover": "/assets/project_2.jpeg"
+    },
+    {
+      "id": "3",
+      "title": "Indie Hustles",
+      "description": "A listing site for Indie hackers to promote their products",
+      "technologies": [
+        "Typescript",
+        "Next.js",
+        "TailwindCSS",
+        "Airtable"
+      ],
+      "live_url": "#!",
+      "code_repo_url": "#!",
+      "cover": "/assets/project_3.jpeg"
+    }
+  ],
+  "workExperience": [
+    {
+      "id": "1",
+      "company": "Tech Corp",
+      "companyWebsite": "#!",
+      "role": "Senior Full Stack Developer",
+      "startDate": "Jan 2020",
+      "endDate": "Present",
+      "technologies": [
+        "Socket.io",
+        "Node.js",
+        "Express",
+        "React"
+      ],
+      "keyResponsibilities": [
+        "Led a team of developers to create scalable web applications.",
+        "Implemented RESTful and GraphQL APIs using Node.js and Express.",
+        "Developed front-end applications using React and Next.js.",
+        "Integrated third-party services and APIs to enhance application functionality.",
+        "Mentored junior developers and conducted code reviews."
+      ]
+    },
+    {
+      "id": "2",
+      "company": "Web Solutions",
+      "companyWebsite": "#!",
+      "role": "Full Stack Developer",
+      "startDate": "Jun 2017",
+      "endDate": "Dec 2019",
+      "technologies": [
+        "MongoDB",
+        "Express",
+        "React",
+        "Node.js"
+      ],
+      "keyResponsibilities": [
+        "Designed and developed web applications using JavaScript and React.",
+        "Built and maintained server-side APIs with Node.js and Express.",
+        "Collaborated with cross-functional teams to deliver high-quality products.",
+        "Ensured applications are responsive and performant.",
+        "Participated in Agile ceremonies and contributed to project planning."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "id": "1",
+      "institution": "Coursera",
+      "degree": "Full Stack Web Development with React",
+      "description": "Completed a Coursera specialization that focused on building full-stack web applications using React, Node.js, Express, and MongoDB. Learned best practices for designing and implementing responsive, scalable, and secure web applications.",
+      "startDate": "Sep 2013",
+      "endDate": "May 2017"
+    },
+    {
+      "id": "2",
+      "institution": "University of California, Berkeley",
+      "degree": "Bachelor of Science in Computer Science",
+      "description": "Completed a comprehensive curriculum in computer science, including courses in data structures, algorithms, software engineering, and artificial intelligence. Worked on several projects, including a web application for managing student organizations and a mobile app for tracking fitness activities.",
+      "startDate": "Sep 2013",
+      "endDate": "May 2017"
+    }
+  ],
+  "testimonials": [
+    {
+      "id": "1",
+      "name": "Jane Smith",
+      "avatar": "/assets/testimonial_1_avatar.jpg",
+      "title": "Project Manager",
+      "company": "Tech Solutions Inc.",
+      "feedback": "John is a fantastic developer who consistently delivers high-quality work. His ability to solve complex problems is impressive."
+    },
+    {
+      "id": "2",
+      "name": "Mike Johnson",
+      "avatar": "/assets/testimonial_2_avatar.jpg",
+      "title": "CEO",
+      "company": "Web Innovators LLC",
+      "feedback": "John is a highly skilled developer who brings a lot of value to our projects. His expertise in full stack development is top-notch."
+    }
+  ]
+}
