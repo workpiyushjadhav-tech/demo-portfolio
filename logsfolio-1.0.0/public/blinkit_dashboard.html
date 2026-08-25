@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BlinkIT Grocery Sales &mdash; Performance Dashboard</title>
+<meta name="description" content="Interactive recreation of a Power BI grocery sales analytics report for BlinkIT, built with HTML, Tailwind CSS and Chart.js." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+        colors: {
+          brand: {
+            yellow: '#F8CB45',
+            yellowDeep: '#E8A91A',
+            gold: '#996F0F',
+            green: '#1AAB40',
+            greenDeep: '#0B6B1E',
+            ink: '#1C1C1C',
+          },
+          canvasbg: '#F6F6F3',
+          cardline: '#E7E4DD',
+        },
+        boxShadow: {
+          card: '0 1px 2px rgba(28,28,28,0.04), 0 8px 24px -12px rgba(28,28,28,0.10)',
+          cardHover: '0 1px 2px rgba(28,28,28,0.06), 0 14px 32px -12px rgba(28,28,28,0.16)',
+        },
+      }
+    }
+  }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+
+<style>
+  :root{
+    --brand-yellow:#F8CB45;
+    --brand-yellow-deep:#E8A91A;
+    --brand-green:#1AAB40;
+    --brand-green-deep:#0B6B1E;
+    --ink:#1C1C1C;
+    --ink-soft:#5B584F;
+    --canvas:#F6F6F3;
+    --surface:#FFFFFF;
+    --border:#E7E4DD;
+    --muted:#6D695F;
+  }
+
+  html{ scroll-behavior:smooth; }
+  body{ background:var(--canvas); color:var(--ink); font-feature-settings:"tnum" 1,"cv11" 1; }
+  .tnum{ font-variant-numeric: tabular-nums; }
+
+  /* Visible, deliberate focus ring everywhere -- WCAG 2.4.7 */
+  :focus{ outline:none; }
+  :focus-visible{
+    outline: 3px solid var(--brand-green-deep);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:16px;
+    box-shadow: 0 1px 2px rgba(28,28,28,0.04), 0 8px 24px -14px rgba(28,28,28,0.12);
+  }
+
+  .eyebrow{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+
+  .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    background:#FFFFFF; border:1px solid var(--border);
+    color:var(--ink); font-size:12.5px; font-weight:600;
+    padding:5px 6px 5px 12px; border-radius:999px;
+    transition: box-shadow .15s ease, border-color .15s ease;
+  }
+  .chip button{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:18px; height:18px; border-radius:999px;
+    background:var(--canvas); color:var(--ink-soft);
+  }
+  .chip button:hover{ background:#EFE9D8; color:var(--ink); }
+
+  /* Custom checkbox */
+  .filter-check{
+    display:flex; align-items:center; gap:10px;
+    padding:6px 8px; border-radius:10px; cursor:pointer;
+    font-size:13.5px; color:var(--ink);
+    transition: background-color .15s ease;
+  }
+  .filter-check:hover{ background:#F1EEE4; }
+  .filter-check input{ position:absolute; opacity:0; width:1px; height:1px; }
+  .box{
+    flex:0 0 auto; width:18px; height:18px; border-radius:5px;
+    border:1.8px solid #C9C4B5; background:#fff;
+    display:flex; align-items:center; justify-content:center;
+    transition: background-color .15s ease, border-color .15s ease;
+  }
+  .filter-check input:checked + .box{
+    background:var(--brand-green); border-color:var(--brand-green);
+  }
+  .box svg{ width:12px; height:12px; opacity:0; transform:scale(.6); transition:opacity .12s ease, transform .12s ease; }
+  .filter-check input:checked + .box svg{ opacity:1; transform:scale(1); }
+  .filter-check input:focus-visible + .box{ outline:3px solid var(--brand-green-deep); outline-offset:2px; }
+  .count-pill{
+    margin-left:auto; font-size:11px; font-weight:700; color:var(--muted);
+    background:var(--canvas); border-radius:999px; padding:2px 8px;
+  }
+
+  /* Scrollable item-type list */
+  .scroll-panel{ max-height:216px; overflow-y:auto; }
+  .scroll-panel::-webkit-scrollbar{ width:8px; }
+  .scroll-panel::-webkit-scrollbar-track{ background:transparent; }
+  .scroll-panel::-webkit-scrollbar-thumb{ background:#DAD5C6; border-radius:999px; }
+
+  /* Legend swatch buttons (donut / clustered chart) */
+  .legend-btn{
+    display:flex; align-items:center; gap:8px; width:100%;
+    padding:7px 10px; border-radius:10px; font-size:13px; font-weight:600;
+    border:1px solid transparent; background:transparent; text-align:left;
+    transition: background-color .15s ease, opacity .15s ease, border-color .15s ease;
+  }
+  .legend-btn:hover{ background:#F1EEE4; }
+  .legend-btn[aria-pressed="true"]{ border-color:var(--border); background:#F8F7F2; }
+  .legend-btn.dim{ opacity:.42; }
+  .swatch{ width:11px; height:11px; border-radius:3px; flex:0 0 auto; }
+  .legend-val{ margin-left:auto; font-weight:800; }
+
+  /* Metric segmented control */
+  .seg-btn{
+    font-size:12.5px; font-weight:700; padding:8px 14px; border-radius:999px;
+    color:var(--ink-soft); transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
+  }
+  .seg-btn[aria-pressed="true"]{
+    background:var(--ink); color:#fff; box-shadow:0 4px 10px -4px rgba(28,28,28,.5);
+  }
+
+  /* Funnel */
+  .funnel-row{ width:100%; text-align:left; }
+  .funnel-track{
+    background:#F1EFE7; border-radius:10px; height:34px; overflow:hidden; position:relative;
+  }
+  .funnel-fill{
+    height:100%; border-radius:10px;
+    display:flex; align-items:center;
+    transition: width .35s cubic-bezier(.22,.9,.3,1), background-color .2s ease;
+  }
+  .funnel-row.dim .funnel-fill{ opacity:.4; }
+
+  /* Item-type bar chart wrapper needs height for 16 categories */
+  .tall-chart-wrap{ position:relative; height:560px; }
+  .mid-chart-wrap{ position:relative; height:230px; }
+  .line-chart-wrap{ position:relative; height:250px; }
+
+  /* Pivot table */
+  table.pivot{ width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
+  table.pivot th{
+    text-align:right; font-size:11px; font-weight:700; letter-spacing:.04em;
+    text-transform:uppercase; color:var(--muted); padding:0 10px 10px; white-space:nowrap;
+  }
+  table.pivot th:first-child, table.pivot td:first-child{ text-align:left; }
+  table.pivot th button{ display:inline-flex; align-items:center; gap:4px; }
+  table.pivot td{ padding:11px 10px; border-top:1px solid var(--border); text-align:right; white-space:nowrap; }
+  table.pivot tbody tr{ transition: background-color .15s ease; }
+  table.pivot tbody tr:hover{ background:#F8F7F2; }
+  table.pivot tbody tr.selected{ background:#FBF3D9; }
+  table.pivot tfoot td{ padding:12px 10px; border-top:2px solid var(--ink); font-weight:800; }
+  .row-btn{ font-weight:700; display:flex; align-items:center; gap:8px; }
+  .type-dot{ width:9px; height:9px; border-radius:999px; flex:0 0 auto; }
+
+  /* Drawer for mobile filters */
+  #filterDrawer{ transition: transform .25s ease; }
+  #drawerBackdrop{ transition: opacity .2s ease; }
+
+  @keyframes kpiPulse{ 0%{ box-shadow:0 0 0 0 rgba(26,171,64,.35);} 100%{ box-shadow:0 0 0 10px rgba(26,171,64,0);} }
+  .pulse{ animation: kpiPulse .5s ease-out; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.001s !important; transition-duration:.001s !important; scroll-behavior:auto !important; }
+  }
+
+  @media (max-width: 1023px){
+    .tall-chart-wrap{ height:460px; }
+  }
+</style>
+</head>
+<body class="font-sans text-brand-ink">
+
+<a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:bg-brand-ink focus:text-white focus:px-4 focus:py-2 focus:rounded-lg">Skip to dashboard content</a>
+
+<div id="liveStatus" class="sr-only" role="status" aria-live="polite"></div>
+
+<!-- HEADER -->
+<header class="bg-brand-yellow border-b border-black/10">
+  <div class="max-w-[1440px] mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-11 h-11 rounded-2xl bg-brand-ink flex items-center justify-center shrink-0" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#F8CB45"/>
+        </svg>
+      </div>
+      <div class="min-w-0">
+        <p class="font-black text-xl sm:text-2xl leading-none tracking-tight truncate">
+          <span class="text-brand-ink">blink</span><span class="text-brand-greenDeep">it</span>
+        </p>
+        <p class="text-[11px] sm:text-xs font-semibold text-brand-ink/70 tracking-wide">India&rsquo;s Last Minute App &mdash; Grocery Sales Dashboard</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 shrink-0">
+      <button id="mobileFilterBtn" class="lg:hidden inline-flex items-center gap-2 bg-brand-ink text-white text-sm font-semibold px-3.5 py-2.5 rounded-xl active:scale-95 transition" aria-haspopup="dialog" aria-controls="filterDrawer" aria-expanded="false">
+        <i data-lucide="sliders-horizontal" class="w-4 h-4" aria-hidden="true"></i>
+        <span>Filters</span>
+      </button>
+      <button id="resetBtn" class="inline-flex items-center gap-2 bg-white/90 hover:bg-white text-brand-ink text-sm font-semibold px-3.5 py-2.5 rounded-xl border border-black/10 active:scale-95 transition" type="button">
+        <i data-lucide="rotate-ccw" class="w-4 h-4" aria-hidden="true"></i>
+        <span class="hidden sm:inline">Reset filters</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="max-w-[1440px] mx-auto px-4 sm:px-6 py-6 flex gap-6 items-start">
+
+  <!-- SIDEBAR (desktop) -->
+  <aside id="filterSidebar" class="hidden lg:block w-[264px] shrink-0 sticky top-6" role="region" aria-label="Report filters">
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-extrabold text-sm tracking-tight">Filters</h2>
+        <span class="eyebrow">Slicers</span>
+      </div>
+      <div id="sidebarFilterGroups" class="space-y-5"></div>
+    </div>
+
+    <div class="card p-4 mt-4">
+      <p class="eyebrow mb-2">Dataset</p>
+      <p class="text-sm text-brand-ink/70 leading-relaxed">8,523 line items across 10 outlets, recreated from the original BlinkIT Power BI data model.</p>
+    </div>
+  </aside>
+
+  <!-- MOBILE DRAWER -->
+  <div id="drawerBackdrop" class="hidden fixed inset-0 bg-black/40 z-40 lg:hidden opacity-0"></div>
+  <div id="filterDrawer" class="fixed top-0 left-0 h-full w-[86%] max-w-[320px] bg-canvasbg z-50 lg:hidden -translate-x-full overflow-y-auto" role="dialog" aria-modal="true" aria-label="Report filters">
+    <div class="p-4 flex items-center justify-between border-b border-cardline sticky top-0 bg-canvasbg">
+      <h2 class="font-extrabold">Filters</h2>
+      <button id="closeDrawerBtn" class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-black/5" aria-label="Close filters">
+        <i data-lucide="x" class="w-5 h-5" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="p-4">
+      <div id="drawerFilterGroups" class="space-y-5"></div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <main id="main-content" class="min-w-0 flex-1">
+
+    <!-- Active filter chips -->
+    <div id="chipsRow" class="flex flex-wrap items-center gap-2 mb-4 min-h-[34px]" aria-label="Active filters"></div>
+
+    <!-- KPI CARDS -->
+    <section aria-labelledby="kpiHeading" class="mb-6">
+      <h2 id="kpiHeading" class="sr-only">Key performance indicators</h2>
+      <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
+
+        <div class="card p-5" id="kpiTotalSales">
+          <div class="flex items-start justify-between">
+            <p class="eyebrow">Total Sales</p>
+            <div class="w-8 h-8 rounded-full bg-brand-green/10 flex items-center justify-center"><i data-lucide="indian-rupee" class="w-4 h-4 text-brand-greenDeep" aria-hidden="true"></i></div>
+          </div>
+          <p class="tnum font-black text-2xl sm:text-3xl mt-2 tracking-tight" data-kpi-value>&mdash;</p>
+          <p class="text-xs text-brand-ink/70 mt-1">Sum of Sales across filtered orders</p>
+        </div>
+
+        <div class="card p-5" id="kpiItems">
+          <div class="flex items-start justify-between">
+            <p class="eyebrow">No. of Items</p>
+            <div class="w-8 h-8 rounded-full bg-brand-yellow/25 flex items-center justify-center"><i data-lucide="package" class="w-4 h-4 text-brand-gold" aria-hidden="true"></i></div>
+          </div>
+          <p class="tnum font-black text-2xl sm:text-3xl mt-2 tracking-tight" data-kpi-value>&mdash;</p>
+          <p class="text-xs text-brand-ink/70 mt-1">Count of line items sold</p>
+        </div>
+
+        <div class="card p-5" id="kpiRating">
+          <div class="flex items-start justify-between">
+            <p class="eyebrow">Avg Rating</p>
+            <div class="w-8 h-8 rounded-full bg-brand-ink/10 flex items-center justify-center"><i data-lucide="star" class="w-4 h-4 text-brand-ink" aria-hidden="true"></i></div>
+          </div>
+          <p class="tnum font-black text-2xl sm:text-3xl mt-2 tracking-tight" data-kpi-value>&mdash;</p>
+          <div class="flex items-center gap-0.5 mt-1.5" id="ratingStars" aria-hidden="true"></div>
+        </div>
+
+        <div class="card p-5" id="kpiAvgSales">
+          <div class="flex items-start justify-between">
+            <p class="eyebrow">Avg Sales</p>
+            <div class="w-8 h-8 rounded-full bg-brand-green/10 flex items-center justify-center"><i data-lucide="trending-up" class="w-4 h-4 text-brand-greenDeep" aria-hidden="true"></i></div>
+          </div>
+          <p class="tnum font-black text-2xl sm:text-3xl mt-2 tracking-tight" data-kpi-value>&mdash;</p>
+          <p class="text-xs text-brand-ink/70 mt-1">Average sales per line item</p>
+        </div>
+
+      </div>
+    </section>
+
+    <div id="emptyState" class="hidden card p-8 text-center mb-6">
+      <p class="font-extrabold text-lg">No orders match these filters</p>
+      <p class="text-sm text-brand-ink/70 mt-1 mb-4">Try removing a filter chip above, or reset everything.</p>
+      <button id="emptyResetBtn" class="inline-flex items-center gap-2 bg-brand-ink text-white text-sm font-semibold px-4 py-2.5 rounded-xl">
+        <i data-lucide="rotate-ccw" class="w-4 h-4" aria-hidden="true"></i> Reset filters
+      </button>
+    </div>
+
+    <!-- CHART GRID -->
+    <div id="chartGrid" class="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1.25fr] gap-4">
+
+      <!-- Item Type bar (tall, col 1, spans all rows) -->
+      <section class="card p-5 lg:row-span-3" aria-labelledby="h-itemtype">
+        <div class="flex items-center justify-between mb-1">
+          <h3 id="h-itemtype" class="font-extrabold text-sm">Sales by Item Type</h3>
+          <i data-lucide="bar-chart-3" class="w-4 h-4 text-brand-ink/40" aria-hidden="true"></i>
+        </div>
+        <p class="text-xs text-brand-ink/70 mb-3">Click a bar to filter, or use the Item Type list in Filters</p>
+        <div class="tall-chart-wrap">
+          <canvas id="chartItemType" role="img" aria-label="Horizontal bar chart of total sales by item type"></canvas>
+        </div>
+      </section>
+
+      <!-- Fat content donut (col2 row1) -->
+      <section class="card p-5" aria-labelledby="h-fat">
+        <div class="flex items-center justify-between mb-1">
+          <h3 id="h-fat" class="font-extrabold text-sm">Sales by Item Fat Content</h3>
+          <i data-lucide="pie-chart" class="w-4 h-4 text-brand-ink/40" aria-hidden="true"></i>
+        </div>
+        <div class="flex items-center gap-3 mt-2">
+          <div class="relative w-[128px] h-[128px] shrink-0">
+            <canvas id="chartFatDonut" role="img" aria-label="Donut chart of total sales by item fat content"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <p class="text-[9px] font-bold uppercase tracking-wide text-brand-ink/70">Sales</p>
+              <p class="tnum font-extrabold text-[13px] leading-tight" id="fatDonutCenter">&mdash;</p>
+            </div>
+          </div>
+          <div id="fatLegend" class="flex-1 min-w-0"></div>
+        </div>
+      </section>
+
+      <!-- Year line (col3 rows1-2) -->
+      <section class="card p-5 lg:row-span-2" aria-labelledby="h-year">
+        <div class="flex items-center justify-between mb-1">
+          <h3 id="h-year" class="font-extrabold text-sm">Sales Trend by Outlet Establishment Year</h3>
+          <i data-lucide="line-chart" class="w-4 h-4 text-brand-ink/40" aria-hidden="true"></i>
+        </div>
+        <p class="text-xs text-brand-ink/70 mb-2">Click a point or a year chip to filter</p>
+        <div class="line-chart-wrap">
+          <canvas id="chartYear" role="img" aria-label="Line chart of total sales by outlet establishment year"></canvas>
+        </div>
+        <div id="yearChips" class="flex flex-wrap gap-1.5 mt-3"></div>
+      </section>
+
+      <!-- Clustered bar (col2 row2) -->
+      <section class="card p-5" aria-labelledby="h-clustered">
+        <div class="flex items-center justify-between mb-1">
+          <h3 id="h-clustered" class="font-extrabold text-sm">Sales by Location &amp; Fat Content</h3>
+          <i data-lucide="bar-chart-2" class="w-4 h-4 text-brand-ink/40" aria-hidden="true"></i>
+        </div>
+        <div class="mid-chart-wrap mt-2">
+          <canvas id="chartClustered" role="img" aria-label="Grouped bar chart of total sales by outlet location type and item fat content"></canvas>
+        </div>
+        <div id="clusteredLegend" class="flex items-center gap-4 mt-2"></div>
+      </section>
+
+      <!-- Outlet size donut (col2 row3) -->
+      <section class="card p-5" aria-labelledby="h-size">
+        <div class="flex items-center justify-between mb-1">
+          <h3 id="h-size" class="font-extrabold text-sm">Items by Outlet Size</h3>
+          <i data-lucide="pie-chart" class="w-4 h-4 text-brand-ink/40" aria-hidden="true"></i>
+        </div>
+        <div class="flex items-center gap-3 mt-2">
+          <div class="relative w-[112px] h-[112px] shrink-0">
+            <canvas id="chartSizeDonut" role="img" aria-label="Donut chart of item count by outlet size"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <p class="text-[9px] font-bold uppercase tracking-wide text-brand-ink/70">Items</p>
+              <p class="tnum font-extrabold text-[12px] leading-tight" id="sizeDonutCenter">&mdash;</p>
+            </div>
+          </div>
+          <div id="sizeLegend" class="flex-1 min-w-0"></div>
+        </div>
+      </section>
+
+      <!-- Funnel (col3 row3) -->
+      <section class="card p-5" aria-labelledby="h-funnel">
+        <div class="flex items-center justify-between mb-2">
+          <h3 id="h-funnel" class="font-extrabold text-sm">Metric by Outlet Location</h3>
+          <i data-lucide="filter" class="w-4 h-4 text-brand-ink/40" aria-hidden="true"></i>
+        </div>
+        <div id="metricSeg" class="inline-flex flex-wrap gap-1.5 bg-canvasbg p-1 rounded-full mb-3" role="group" aria-label="Choose metric shown in the funnel"></div>
+        <div id="funnelWrap" class="space-y-2.5"></div>
+      </section>
+
+    </div>
+
+    <!-- Pivot table -->
+    <section class="card p-5 mt-4" aria-labelledby="h-pivot">
+      <div class="flex items-center justify-between mb-3">
+        <h3 id="h-pivot" class="font-extrabold text-sm">Summary by Outlet Type</h3>
+        <i data-lucide="table" class="w-4 h-4 text-brand-ink/40" aria-hidden="true"></i>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="pivot" id="pivotTable">
+          <thead>
+            <tr>
+              <th data-sort="outletType">Outlet Type</th>
+              <th data-sort="sales"><button type="button">Total Sales <i data-lucide="arrow-up-down" class="w-3 h-3" aria-hidden="true"></i></button></th>
+              <th data-sort="count"><button type="button">No. of Items <i data-lucide="arrow-up-down" class="w-3 h-3" aria-hidden="true"></i></button></th>
+              <th data-sort="avgSales"><button type="button">Avg Sales <i data-lucide="arrow-up-down" class="w-3 h-3" aria-hidden="true"></i></button></th>
+              <th data-sort="rating"><button type="button">Avg Rating <i data-lucide="arrow-up-down" class="w-3 h-3" aria-hidden="true"></i></button></th>
+              <th data-sort="visibility"><button type="button">Avg Visibility <i data-lucide="arrow-up-down" class="w-3 h-3" aria-hidden="true"></i></button></th>
+            </tr>
+          </thead>
+          <tbody id="pivotBody"></tbody>
+          <tfoot id="pivotFoot"></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <footer class="text-center text-xs text-brand-ink/70 mt-8 pb-6">
+      Interactive recreation of a Power BI report &middot; built with HTML, Tailwind CSS &amp; Chart.js &middot; all figures computed live from the underlying dataset.
+    </footer>
+
+  </main>
+</div>
+
+<script>
+/* ======================= DATA ======================= */
+const COLS = ["itemType", "fatContent", "outletId", "locationType", "outletSize", "outletType", "year", "rating", "sales", "count", "visibility"];
+const RAW = [["Baking Goods","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,3,119.91,1,0.0356],["Baking Goods","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,1868.2,15,2.0612],["Baking Goods","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,5,289.66,3,0.3841],["Baking Goods","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,4,195.01,1,0.0477],["Baking Goods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,1,103.83,1,0.0237],["Baking Goods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,3,674.06,4,0.1741],["Baking Goods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,3019.98,26,1.3888],["Baking Goods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,5,675.91,4,0.3923],["Baking Goods","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,362.16,5,0.3418],["Baking Goods","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,1,94.34,1,0.0435],["Baking Goods","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,4,3318.69,25,1.4186],["Baking Goods","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,5,308.73,3,0.3124],["Baking Goods","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,3928.96,33,1.7721],["Baking Goods","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,157.36,1,0.0955],["Baking Goods","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,3,125.44,1,0.3049],["Baking Goods","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,2805.69,25,2.4239],["Baking Goods","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,5,319.98,2,0.1757],["Baking Goods","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,1,196.51,1,0.0],["Baking Goods","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,275.01,3,0.0954],["Baking Goods","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,3930.13,33,2.0996],["Baking Goods","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,163.09,2,0.122],["Baking Goods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,1,124.64,1,0.1741],["Baking Goods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,2,177.77,1,0.0779],["Baking Goods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,3,750.79,6,0.1487],["Baking Goods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,2547.11,21,1.0987],["Baking Goods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,5,748.86,6,0.49],["Baking Goods","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,2,158.66,1,0.0954],["Baking Goods","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,3195.38,28,1.752],["Baking Goods","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,5,549.02,4,0.2932],["Baking Goods","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,509.37,4,0.2777],["Baking Goods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,1,99.34,1,0.0463],["Baking Goods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,3,701.22,5,0.2788],["Baking Goods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,3541.7,31,1.7875],["Baking Goods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,5,119.48,1,0.083],["Baking Goods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,2,178.07,1,0.078],["Baking Goods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,3236.54,27,1.3544],["Baking Goods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,82.42,1,0.0147],["Baking Goods","Regular","OUT010","Tier 3","High","Grocery Store",2011,2,120.11,2,0.2899],["Baking Goods","Regular","OUT010","Tier 3","High","Grocery Store",2011,4,1875.58,13,1.6018],["Baking Goods","Regular","OUT010","Tier 3","High","Grocery Store",2011,5,189.78,2,0.4063],["Baking Goods","Regular","OUT010","Tier 3","Medium","Grocery Store",2011,3,185.42,1,0.113],["Baking Goods","Regular","OUT010","Tier 3","Medium","Grocery Store",2011,4,47.1,1,0.1377],["Baking Goods","Regular","OUT010","Tier 3","Small","Grocery Store",2011,4,437.66,3,0.3336],["Baking Goods","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,3,131.26,1,0.0485],["Baking Goods","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,4,4512.42,34,2.0657],["Baking Goods","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,5,314.29,3,0.2497],["Baking Goods","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,1,39.28,1,0.1625],["Baking Goods","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,2,371.55,2,0.1021],["Baking Goods","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,3,92.21,1,0.141],["Baking Goods","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,4,3210.2,25,1.3728],["Baking Goods","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,5,789.27,6,0.4491],["Baking Goods","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,173.34,3,0.2305],["Baking Goods","Regular","OUT017","Tier 2","Small","Supermarket Type1",2020,4,88.35,1,0.1151],["Baking Goods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,1,100.04,1,0.0611],["Baking Goods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,2,195.21,1,0.1178],["Baking Goods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,316.82,3,0.139],["Baking Goods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,3830.79,28,1.9705],["Baking Goods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,65.01,1,0.0297],["Baking Goods","Regular","OUT019","Tier 1","Small","Grocery Store",2018,1,197.31,1,0.1414],["Baking Goods","Regular","OUT019","Tier 1","Small","Grocery Store",2018,2,223.14,1,0.2246],["Baking Goods","Regular","OUT019","Tier 1","Small","Grocery Store",2018,4,1747.23,13,1.6477],["Baking Goods","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,187.12,1,0.0672],["Baking Goods","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,3653.77,25,1.4862],["Baking Goods","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,482.21,4,0.2247],["Baking Goods","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,2,97.64,1,0.0609],["Baking Goods","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,3,48.7,1,0.0823],["Baking Goods","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,4,3653.78,28,1.9965],["Baking Goods","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,5,385.83,3,0.2052],["Baking Goods","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,1,98.04,1,0.0302],["Baking Goods","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,3,426.84,2,0.0938],["Baking Goods","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,4,3488.59,23,1.4728],["Baking Goods","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,5,144.98,2,0.2504],["Baking Goods","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,250.4,2,0.063],["Baking Goods","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,5,163.32,1,0.0627],["Baking Goods","Regular","OUT045","Tier 2","Small","Supermarket Type1",2015,3,151.34,1,0.0],["Baking Goods","Regular","OUT045","Tier 2","Small","Supermarket Type1",2015,4,121.31,1,0.0],["Baking Goods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,2,129.16,1,0.0],["Baking Goods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,3,476.41,5,0.3072],["Baking Goods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,4,4134.41,28,1.7219],["Baking Goods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,5,259.27,4,0.2858],["Baking Goods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,1,188.02,1,0.0676],["Baking Goods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,2,172.04,1,0.0249],["Baking Goods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,256.76,2,0.0384],["Baking Goods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,3272.56,28,1.9264],["Baking Goods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,745.8,5,0.4394],["Breads","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,3,220.01,2,0.2102],["Breads","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,779.99,4,0.3693],["Breads","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,4,196.58,1,0.0],["Breads","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,2,218.72,1,0.069],["Breads","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,3,89.19,1,0.1288],["Breads","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,1597.84,13,0.7957],["Breads","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,5,86.36,1,0.0207],["Breads","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,405.4,2,0.016],["Breads","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,1,143.98,2,0.0358],["Breads","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,4,1135.55,10,0.9054],["Breads","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,2,187.79,2,0.2046],["Breads","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,539.9,3,0.1628],["Breads","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,828.86,7,0.3523],["Breads","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,630.31,4,0.2976],["Breads","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,1179.03,10,1.2273],["Breads","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,1,63.28,1,0.1107],["Breads","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,327.47,3,0.2177],["Breads","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,1963.61,13,0.7552],["Breads","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,1,93.84,1,0.1464],["Breads","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,3,513.8,3,0.285],["Breads","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,1456.07,10,0.5196],["Breads","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,5,203.77,2,0.1133],["Breads","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,3,300.08,2,0.1284],["Breads","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,1818.7,14,0.6984],["Breads","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,309.86,2,0.0481],["Breads","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,1,155.93,1,0.1282],["Breads","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,1581.27,12,0.734],["Breads","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,1651.46,12,0.717],["Breads","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,162.86,1,0.0965],["Breads","Regular","OUT010","Tier 3","High","Grocery Store",2011,3,130.23,1,0.0912],["Breads","Regular","OUT010","Tier 3","High","Grocery Store",2011,4,1167.38,8,0.8197],["Breads","Regular","OUT010","Tier 3","High","Grocery Store",2011,5,138.78,1,0.1906],["Breads","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,1,109.06,1,0.0439],["Breads","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,3,226.3,1,0.0798],["Breads","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,4,855.35,6,0.3593],["Breads","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,5,161.16,1,0.1424],["Breads","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,2,229.0,1,0.0804],["Breads","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,4,1102.03,6,0.2888],["Breads","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,5,35.29,1,0.1691],["Breads","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,128.93,1,0.0547],["Breads","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,1081.33,9,0.5154],["Breads","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,142.28,1,0.1143],["Breads","Regular","OUT019","Tier 1","Small","Grocery Store",2018,4,1020.94,6,0.5212],["Breads","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,1,263.66,1,0.0636],["Breads","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,362.06,2,0.1236],["Breads","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,1535.87,11,0.3846],["Breads","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,1,131.03,1,0.0545],["Breads","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,4,1740.66,11,0.8068],["Breads","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,5,44.04,1,0.016],["Breads","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,2,79.9,1,0.0749],["Breads","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,3,179.13,2,0.2442],["Breads","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,4,723.53,6,0.4365],["Breads","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,5,228.2,1,0.0801],["Breads","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,47.24,1,0.0161],["Breads","Regular","OUT045","Tier 2","Small","Supermarket Type1",2015,4,640.63,4,0.1429],["Breads","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,1,250.31,1,0.0303],["Breads","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,4,1961.48,12,0.591],["Breads","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,159.36,1,0.1428],["Breads","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,1371.08,9,0.4111],["Breads","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,291.35,2,0.0464],["Breakfast","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,730.68,4,0.4121],["Breakfast","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,954.63,6,0.5296],["Breakfast","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,166.35,1,0.0614],["Breakfast","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,2,230.33,1,0.0215],["Breakfast","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,4,360.5,3,0.3604],["Breakfast","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,536.87,3,0.2164],["Breakfast","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,132.86,1,0.0634],["Breakfast","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,3,98.54,1,0.2662],["Breakfast","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,466.79,3,0.4842],["Breakfast","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,599.32,3,0.1821],["Breakfast","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,556.04,3,0.1738],["Breakfast","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,391.19,3,0.3569],["Breakfast","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,5,232.03,1,0.0214],["Breakfast","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,176.24,1,0.0725],["Breakfast","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,471.82,3,0.2413],["Breakfast","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,671.46,4,0.3074],["Breakfast","Regular","OUT010","Tier 3","High","Grocery Store",2011,1,181.63,1,0.1109],["Breakfast","Regular","OUT010","Tier 3","High","Grocery Store",2011,4,448.05,3,0.4054],["Breakfast","Regular","OUT010","Tier 3","Medium","Grocery Store",2011,5,150.57,1,0.106],["Breakfast","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,4,862.01,6,0.3525],["Breakfast","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,5,100.73,1,0.0945],["Breakfast","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,4,886.68,5,0.3785],["Breakfast","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,91.88,1,0.1317],["Breakfast","Regular","OUT017","Tier 2","Small","Supermarket Type1",2020,4,104.43,1,0.0951],["Breakfast","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,90.58,1,0.1315],["Breakfast","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,792.3,7,0.4204],["Breakfast","Regular","OUT019","Tier 1","Small","Grocery Store",2018,1,155.56,1,0.0687],["Breakfast","Regular","OUT019","Tier 1","Small","Grocery Store",2018,2,49.7,1,0.0579],["Breakfast","Regular","OUT019","Tier 1","Small","Grocery Store",2018,4,279.27,3,0.5027],["Breakfast","Regular","OUT019","Tier 1","Small","Grocery Store",2018,5,232.73,1,0.0986],["Breakfast","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,693.3,6,0.3427],["Breakfast","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,325.31,2,0.1951],["Breakfast","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,1,227.31,2,0.218],["Breakfast","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,4,655.95,5,0.41],["Breakfast","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,4,639.57,4,0.3492],["Breakfast","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,128.8,1,0.0208],["Breakfast","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,2,41.25,1,0.1252],["Breakfast","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,3,49.7,1,0.0331],["Breakfast","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,4,501.89,4,0.2692],["Breakfast","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,5,130.5,1,0.0207],["Breakfast","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,56.76,1,0.0613],["Breakfast","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,565.62,5,0.4027],["Breakfast","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,378.97,3,0.2567],["Canned","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,3,110.99,1,0.2115],["Canned","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,2108.24,16,1.8163],["Canned","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,4,309.66,2,0.279],["Canned","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,3,621.53,3,0.3234],["Canned","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,3860.4,29,1.6053],["Canned","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,5,117.75,1,0.0319],["Canned","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,3,105.73,1,0.1523],["Canned","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,170.04,2,0.0798],["Canned","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,5,118.34,1,0.1129],["Canned","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,3,176.43,1,0.0351],["Canned","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,4,4320.48,32,1.9863],["Canned","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,5,501.55,3,0.3527],["Canned","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,2,431.64,4,0.1163],["Canned","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,551.85,3,0.196],["Canned","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,4653.13,31,2.2567],["Canned","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,160.49,2,0.1955],["Canned","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,2,219.75,1,0.0799],["Canned","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,3,400.11,3,0.408],["Canned","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,2287.16,15,1.6602],["Canned","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,5,120.54,1,0.1965],["Canned","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,2,52.73,1,0.0974],["Canned","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,261.52,2,0.2768],["Canned","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,4088.98,28,1.6789],["Canned","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,557.3,4,0.2995],["Canned","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,4273.25,33,2.0614],["Canned","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,5,1551.48,9,0.7043],["Canned","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,3,346.58,2,0.1354],["Canned","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,3947.92,29,1.8855],["Canned","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,5,462.96,4,0.4824],["Canned","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,487.77,2,0.0259],["Canned","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,1,143.98,1,0.089],["Canned","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,2,92.78,1,0.1213],["Canned","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,4418.05,30,2.1264],["Canned","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,5,432.47,3,0.2357],["Canned","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,1,101.4,1,0.1036],["Canned","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,2,183.83,1,0.1701],["Canned","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,570.46,5,0.3623],["Canned","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,3888.59,31,1.8619],["Canned","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,379.54,2,0.0501],["Canned","Regular","OUT010","Tier 3","High","Grocery Store",2011,2,186.59,1,0.1208],["Canned","Regular","OUT010","Tier 3","High","Grocery Store",2011,3,100.27,1,0.0137],["Canned","Regular","OUT010","Tier 3","High","Grocery Store",2011,4,1385.76,11,0.9066],["Canned","Regular","OUT010","Tier 3","Medium","Grocery Store",2011,4,101.9,1,0.0152],["Canned","Regular","OUT010","Tier 3","Small","Grocery Store",2011,4,247.81,2,0.2258],["Canned","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,3,163.42,2,0.1027],["Canned","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,4,3738.07,27,1.5397],["Canned","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,5,302.61,3,0.0846],["Canned","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,2,273.45,2,0.0854],["Canned","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,3,713.58,5,0.3188],["Canned","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,4,2413.22,16,0.8899],["Canned","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,5,236.76,2,0.3167],["Canned","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,497.65,4,0.3178],["Canned","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,324.58,2,0.0746],["Canned","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,3992.91,30,2.0768],["Canned","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,737.87,6,0.357],["Canned","Regular","OUT019","Tier 1","Small","Grocery Store",2018,2,227.74,2,0.1986],["Canned","Regular","OUT019","Tier 1","Small","Grocery Store",2018,4,2062.45,14,0.889],["Canned","Regular","OUT019","Tier 1","Small","Grocery Store",2018,5,210.93,2,0.1966],["Canned","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,686.07,4,0.1677],["Canned","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,4201.9,31,1.5208],["Canned","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,276.54,2,0.2629],["Canned","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,1,303.54,2,0.0926],["Canned","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,2,140.15,1,0.0347],["Canned","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,3,502.72,3,0.1622],["Canned","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,4,4271.9,29,1.7162],["Canned","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,5,297.11,2,0.1867],["Canned","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,3,401.94,3,0.2496],["Canned","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,4,4160.36,26,1.71],["Canned","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,5,684.68,5,0.2603],["Canned","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,3,150.9,1,0.0506],["Canned","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,314.46,2,0.1927],["Canned","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,3,466.42,3,0.2277],["Canned","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,4,4273.96,32,1.9837],["Canned","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,5,197.34,2,0.1598],["Canned","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,471.95,3,0.2228],["Canned","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,3214.38,22,1.3824],["Canned","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,185.42,2,0.0389],["Dairy","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,3,441.03,2,0.1963],["Dairy","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,3150.86,20,2.3844],["Dairy","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,5,706.15,4,0.25],["Dairy","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,3,55.8,1,0.1703],["Dairy","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,4,178.1,1,0.0895],["Dairy","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,2,97.6,1,0.0238],["Dairy","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,3,1137.09,6,0.5316],["Dairy","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,6184.78,42,2.558],["Dairy","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,5,828.56,4,0.2574],["Dairy","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,1057.43,7,0.4667],["Dairy","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,3,520.79,4,0.1616],["Dairy","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,4,5035.53,35,2.4294],["Dairy","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,5,264.59,1,0.0053],["Dairy","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,1,93.51,1,0.0352],["Dairy","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,155.03,1,0.0333],["Dairy","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,4739.19,33,2.2348],["Dairy","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,1174.1,8,0.4303],["Dairy","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,2,98.44,1,0.1526],["Dairy","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,3,825.98,6,0.4657],["Dairy","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,2933.59,22,2.7804],["Dairy","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,5,404.01,3,0.4177],["Dairy","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,447.49,3,0.0947],["Dairy","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,4419.43,29,1.7481],["Dairy","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,2,191.15,1,0.0825],["Dairy","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,3,839.97,5,0.2524],["Dairy","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,5243.03,35,2.4274],["Dairy","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,5,91.61,1,0.0351],["Dairy","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,2,438.6,3,0.2093],["Dairy","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,3,155.5,2,0.0748],["Dairy","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,4777.05,33,1.9514],["Dairy","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,5,653.02,3,0.1151],["Dairy","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,112.12,2,0.0557],["Dairy","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,3,674.56,7,0.6622],["Dairy","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,5580.56,38,2.3531],["Dairy","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,5,600.69,4,0.1643],["Dairy","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,2,236.86,2,0.1774],["Dairy","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,589.63,4,0.1468],["Dairy","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,5911.39,39,2.4031],["Dairy","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,449.68,4,0.1837],["Dairy","Regular","OUT010","Tier 3","High","Grocery Store",2011,2,46.74,1,0.0807],["Dairy","Regular","OUT010","Tier 3","High","Grocery Store",2011,4,1937.88,12,1.5657],["Dairy","Regular","OUT010","Tier 3","High","Grocery Store",2011,5,145.81,1,0.0761],["Dairy","Regular","OUT010","Tier 3","Small","Grocery Store",2011,4,45.51,1,0.1615],["Dairy","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,2,443.42,2,0.0828],["Dairy","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,3,333.7,2,0.2707],["Dairy","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,4,3111.08,21,1.6319],["Dairy","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,5,144.51,2,0.1563],["Dairy","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,1,181.93,1,0.0637],["Dairy","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,3,255.54,1,0.0743],["Dairy","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,4,2764.87,20,1.5246],["Dairy","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,627.92,3,0.0982],["Dairy","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,5,76.2,1,0.0654],["Dairy","Regular","OUT017","Tier 2","Small","Supermarket Type1",2020,4,149.97,1,0.0083],["Dairy","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,2,220.15,1,0.0],["Dairy","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,309.83,2,0.068],["Dairy","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,3836.97,26,1.7964],["Dairy","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,110.16,1,0.184],["Dairy","Regular","OUT019","Tier 1","Small","Grocery Store",2018,2,157.86,1,0.2991],["Dairy","Regular","OUT019","Tier 1","Small","Grocery Store",2018,3,340.06,2,0.3074],["Dairy","Regular","OUT019","Tier 1","Small","Grocery Store",2018,4,1724.79,12,1.291],["Dairy","Regular","OUT019","Tier 1","Small","Grocery Store",2018,5,346.75,2,0.2535],["Dairy","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,438.59,4,0.4118],["Dairy","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,4515.4,30,1.9642],["Dairy","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,97.57,1,0.038],["Dairy","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,3,448.71,3,0.102],["Dairy","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,4,3984.78,26,1.8863],["Dairy","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,1,96.98,1,0.1085],["Dairy","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,3,281.73,2,0.0969],["Dairy","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,4,2864.94,18,0.9739],["Dairy","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,5,235.36,2,0.0931],["Dairy","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,48.57,1,0.0725],["Dairy","Regular","OUT045","Tier 2","Small","Supermarket Type1",2015,2,231.03,1,0.1194],["Dairy","Regular","OUT045","Tier 2","Small","Supermarket Type1",2015,4,186.02,1,0.0789],["Dairy","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,2,144.11,1,0.0455],["Dairy","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,3,752.75,4,0.3428],["Dairy","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,4,2907.31,20,1.764],["Dairy","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,5,605.81,4,0.0678],["Dairy","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,2,186.72,1,0.0789],["Dairy","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,196.18,1,0.1461],["Dairy","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,3692.73,23,1.5212],["Dairy","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,555.05,4,0.2121],["Frozen Foods","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,1,41.75,1,0.074],["Frozen Foods","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,4146.06,26,1.8838],["Frozen Foods","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,5,320.88,4,0.2187],["Frozen Foods","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,2,39.72,1,0.1657],["Frozen Foods","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,4,199.71,2,0.0469],["Frozen Foods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,2,196.55,1,0.0888],["Frozen Foods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,3,483.87,2,0.102],["Frozen Foods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,5202.1,39,2.5142],["Frozen Foods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,5,704.11,5,0.3176],["Frozen Foods","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,259.26,1,0.066],["Frozen Foods","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,5,150.24,1,0.1402],["Frozen Foods","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,2,707.88,4,0.2399],["Frozen Foods","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,3,412.17,4,0.269],["Frozen Foods","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,4,4886.04,39,2.0297],["Frozen Foods","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,5,829.92,5,0.1402],["Frozen Foods","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,1,53.73,1,0.0403],["Frozen Foods","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,602.05,6,0.4145],["Frozen Foods","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,5271.6,34,1.6618],["Frozen Foods","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,766.57,4,0.18],["Frozen Foods","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,2,258.63,1,0.0239],["Frozen Foods","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,3,39.92,1,0.1733],["Frozen Foods","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,2782.48,22,2.042],["Frozen Foods","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,5,316.06,2,0.1532],["Frozen Foods","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,2,309.3,3,0.0913],["Frozen Foods","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,142.95,2,0.1669],["Frozen Foods","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,5518.24,39,2.1753],["Frozen Foods","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,625.58,5,0.278],["Frozen Foods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,2,377.87,2,0.1556],["Frozen Foods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,3,274.74,2,0.0636],["Frozen Foods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,4948.93,35,1.9801],["Frozen Foods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,5,380.94,3,0.1978],["Frozen Foods","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,2,358.93,2,0.0386],["Frozen Foods","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,3,539.3,3,0.1735],["Frozen Foods","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,4755.54,36,1.8289],["Frozen Foods","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,5,179.63,2,0.2434],["Frozen Foods","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,3,181.3,1,0.0367],["Frozen Foods","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,495.36,3,0.2924],["Frozen Foods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,2,149.1,1,0.0658],["Frozen Foods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,7347.77,52,2.7642],["Frozen Foods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,5,384.61,3,0.0608],["Frozen Foods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,1,105.56,1,0.1121],["Frozen Foods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,2,183.93,1,0.0669],["Frozen Foods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,176.54,2,0.06],["Frozen Foods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,5582.21,40,2.612],["Frozen Foods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,869.16,6,0.1538],["Frozen Foods","Regular","OUT010","Tier 3","High","Grocery Store",2011,1,124.24,1,0.08],["Frozen Foods","Regular","OUT010","Tier 3","High","Grocery Store",2011,3,146.21,1,0.0543],["Frozen Foods","Regular","OUT010","Tier 3","High","Grocery Store",2011,4,1642.04,13,1.769],["Frozen Foods","Regular","OUT010","Tier 3","High","Grocery Store",2011,5,399.25,3,0.6623],["Frozen Foods","Regular","OUT010","Tier 3","Small","Grocery Store",2011,4,39.85,1,0.0771],["Frozen Foods","Regular","OUT010","Tier 3","Small","Grocery Store",2011,5,260.09,1,0.135],["Frozen Foods","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,3,816.01,6,0.3052],["Frozen Foods","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,4,4698.7,35,2.5527],["Frozen Foods","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,5,486.96,4,0.1583],["Frozen Foods","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,1,105.33,1,0.0878],["Frozen Foods","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,3,594.39,5,0.3445],["Frozen Foods","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,4,5081.8,36,2.2753],["Frozen Foods","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,5,275.78,4,0.2812],["Frozen Foods","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,148.64,1,0.0626],["Frozen Foods","Regular","OUT017","Tier 2","Small","Supermarket Type1",2020,4,787.04,5,0.3892],["Frozen Foods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,2,54.86,1,0.1363],["Frozen Foods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,591.96,5,0.1809],["Frozen Foods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,5629.71,39,2.7183],["Frozen Foods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,283.23,2,0.0878],["Frozen Foods","Regular","OUT019","Tier 1","Small","Grocery Store",2018,3,238.42,2,0.4503],["Frozen Foods","Regular","OUT019","Tier 1","Small","Grocery Store",2018,4,2609.28,19,2.0817],["Frozen Foods","Regular","OUT019","Tier 1","Small","Grocery Store",2018,5,145.88,2,0.0769],["Frozen Foods","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,1,46.24,1,0.0414],["Frozen Foods","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,2,75.0,2,0.0459],["Frozen Foods","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,5259.24,36,2.3825],["Frozen Foods","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,229.8,1,0.0905],["Frozen Foods","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,1,162.42,1,0.0425],["Frozen Foods","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,3,583.81,4,0.3488],["Frozen Foods","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,4,5829.25,41,2.8488],["Frozen Foods","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,5,690.24,4,0.1911],["Frozen Foods","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,2,264.72,2,0.1881],["Frozen Foods","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,3,191.38,1,0.0762],["Frozen Foods","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,4,3031.33,21,1.4069],["Frozen Foods","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,5,541.5,3,0.187],["Frozen Foods","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,606.75,4,0.3855],["Frozen Foods","Regular","OUT045","Tier 2","Small","Supermarket Type1",2015,4,392.16,3,0.0873],["Frozen Foods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,1,524.92,3,0.1515],["Frozen Foods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,2,245.61,1,0.0493],["Frozen Foods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,3,408.46,5,0.3639],["Frozen Foods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,4,5152.1,38,2.7415],["Frozen Foods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,5,470.36,5,0.2704],["Frozen Foods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,1,39.75,1,0.1102],["Frozen Foods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,2,383.24,3,0.1955],["Frozen Foods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,350.74,3,0.1531],["Frozen Foods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,4440.7,31,1.9851],["Frozen Foods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,920.73,5,0.2796],["Fruits and Vegetables","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,2,212.86,1,0.0645],["Fruits and Vegetables","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,3227.61,26,2.5583],["Fruits and Vegetables","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,5,571.86,3,0.3482],["Fruits and Vegetables","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,4,384.73,3,0.4148],["Fruits and Vegetables","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,1,182.83,3,0.4488],["Fruits and Vegetables","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,2,285.83,2,0.1249],["Fruits and Vegetables","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,3,818.14,5,0.2369],["Fruits and Vegetables","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,8036.39,58,3.6771],["Fruits and Vegetables","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,5,439.2,5,0.2086],["Fruits and Vegetables","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,3,55.39,1,0.0535],["Fruits and Vegetables","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,1401.91,8,0.3813],["Fruits and Vegetables","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,3,892.77,7,0.5421],["Fruits and Vegetables","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,4,6131.67,44,3.0673],["Fruits and Vegetables","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,5,180.0,3,0.1197],["Fruits and Vegetables","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,1,210.86,1,0.0387],["Fruits and Vegetables","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,446.59,3,0.1416],["Fruits and Vegetables","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,8467.86,64,3.793],["Fruits and Vegetables","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,381.04,3,0.2147],["Fruits and Vegetables","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,1,118.18,1,0.0678],["Fruits and Vegetables","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,2,111.19,1,0.1229],["Fruits and Vegetables","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,3,330.17,3,0.4462],["Fruits and Vegetables","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,4158.42,28,3.2704],["Fruits and Vegetables","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,5,427.64,3,0.225],["Fruits and Vegetables","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,1,120.74,1,0.0258],["Fruits and Vegetables","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,2,231.73,2,0.1603],["Fruits and Vegetables","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,841.8,4,0.089],["Fruits and Vegetables","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,8524.72,65,3.6718],["Fruits and Vegetables","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,549.32,4,0.2288],["Fruits and Vegetables","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,2,184.42,2,0.1299],["Fruits and Vegetables","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,3,367.68,4,0.2044],["Fruits and Vegetables","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,8071.84,59,4.1025],["Fruits and Vegetables","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,5,410.53,3,0.1417],["Fruits and Vegetables","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,1,299.94,3,0.1023],["Fruits and Vegetables","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,2,264.49,2,0.0302],["Fruits and Vegetables","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,3,110.46,2,0.0446],["Fruits and Vegetables","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,7145.45,50,3.5762],["Fruits and Vegetables","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,5,1833.42,13,0.8179],["Fruits and Vegetables","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,2,241.29,1,0.1488],["Fruits and Vegetables","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,3,198.48,1,0.0333],["Fruits and Vegetables","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,722.13,4,0.3085],["Fruits and Vegetables","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,5,117.85,1,0.1032],["Fruits and Vegetables","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,1,297.81,3,0.1284],["Fruits and Vegetables","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,2,424.55,2,0.1696],["Fruits and Vegetables","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,3,443.99,3,0.1981],["Fruits and Vegetables","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,7692.58,54,2.9736],["Fruits and Vegetables","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,5,587.8,3,0.103],["Fruits and Vegetables","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,2,454.24,3,0.1676],["Fruits and Vegetables","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,946.26,7,0.5276],["Fruits and Vegetables","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,6761.39,52,2.9704],["Fruits and Vegetables","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,713.54,6,0.1635],["Fruits and Vegetables","Regular","OUT010","Tier 3","High","Grocery Store",2011,1,223.24,2,0.2057],["Fruits and Vegetables","Regular","OUT010","Tier 3","High","Grocery Store",2011,3,352.01,2,0.155],["Fruits and Vegetables","Regular","OUT010","Tier 3","High","Grocery Store",2011,4,4397.15,34,3.3606],["Fruits and Vegetables","Regular","OUT010","Tier 3","High","Grocery Store",2011,5,88.25,1,0.2388],["Fruits and Vegetables","Regular","OUT010","Tier 3","Medium","Grocery Store",2011,4,366.86,2,0.3088],["Fruits and Vegetables","Regular","OUT010","Tier 3","Small","Grocery Store",2011,4,965.11,5,0.3972],["Fruits and Vegetables","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,1,258.06,2,0.219],["Fruits and Vegetables","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,2,185.86,1,0.0479],["Fruits and Vegetables","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,3,980.16,5,0.2419],["Fruits and Vegetables","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,4,8622.24,56,3.2472],["Fruits and Vegetables","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,5,862.64,5,0.2526],["Fruits and Vegetables","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,3,143.88,1,0.1077],["Fruits and Vegetables","Regular","OUT017","Tier 2","High","Supermarket Type1",2020,4,648.45,3,0.2202],["Fruits and Vegetables","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,3,408.7,3,0.0766],["Fruits and Vegetables","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,7210.76,48,3.1776],["Fruits and Vegetables","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,5,788.2,5,0.3889],["Fruits and Vegetables","Regular","OUT017","Tier 2","Small","Supermarket Type1",2020,1,80.26,1,0.0499],["Fruits and Vegetables","Regular","OUT017","Tier 2","Small","Supermarket Type1",2020,4,514.76,3,0.3123],["Fruits and Vegetables","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,1,250.21,1,0.0666],["Fruits and Vegetables","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,909.11,6,0.4658],["Fruits and Vegetables","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,7904.01,54,3.5082],["Fruits and Vegetables","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,397.62,3,0.1072],["Fruits and Vegetables","Regular","OUT019","Tier 1","Small","Grocery Store",2018,4,5308.92,36,4.3422],["Fruits and Vegetables","Regular","OUT019","Tier 1","Small","Grocery Store",2018,5,179.2,1,0.2092],["Fruits and Vegetables","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,1,120.51,1,0.0],["Fruits and Vegetables","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,2,175.04,1,0.1058],["Fruits and Vegetables","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,460.11,4,0.2862],["Fruits and Vegetables","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,8431.06,50,3.4485],["Fruits and Vegetables","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,846.36,8,0.4691],["Fruits and Vegetables","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,2,377.47,2,0.1093],["Fruits and Vegetables","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,3,1290.64,9,0.6888],["Fruits and Vegetables","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,4,6683.3,44,2.5734],["Fruits and Vegetables","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,5,913.44,6,0.4198],["Fruits and Vegetables","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,2,217.21,3,0.1322],["Fruits and Vegetables","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,3,1010.02,6,0.482],["Fruits and Vegetables","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,4,6513.5,45,2.8948],["Fruits and Vegetables","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,5,568.16,3,0.1063],["Fruits and Vegetables","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,2,139.98,1,0.0],["Fruits and Vegetables","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,3,48.1,1,0.0166],["Fruits and Vegetables","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,436.6,3,0.1818],["Fruits and Vegetables","Regular","OUT045","Tier 2","Small","Supermarket Type1",2015,2,221.75,1,0.0876],["Fruits and Vegetables","Regular","OUT045","Tier 2","Small","Supermarket Type1",2015,4,423.48,3,0.3589],["Fruits and Vegetables","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,2,363.96,2,0.1736],["Fruits and Vegetables","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,3,394.69,3,0.2653],["Fruits and Vegetables","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,4,8793.91,52,3.3567],["Fruits and Vegetables","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,5,714.44,4,0.2294],["Fruits and Vegetables","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,588.07,6,0.5368],["Fruits and Vegetables","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,9854.83,61,3.7587],["Fruits and Vegetables","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,460.2,3,0.1315],["Hard Drinks","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,3,112.49,1,0.1878],["Hard Drinks","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,1657.04,13,1.2295],["Hard Drinks","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,5,36.65,1,0.1176],["Hard Drinks","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,4,235.56,1,0.1263],["Hard Drinks","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,1,150.84,1,0.0108],["Hard Drinks","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,3,106.19,1,0.0153],["Hard Drinks","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,2759.12,19,1.318],["Hard Drinks","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,5,248.18,2,0.0882],["Hard Drinks","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,114.25,1,0.0348],["Hard Drinks","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,2,125.54,1,0.0425],["Hard Drinks","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,4,2356.83,17,1.3843],["Hard Drinks","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,5,575.22,3,0.1945],["Hard Drinks","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,409.1,2,0.1989],["Hard Drinks","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,2847.24,18,1.1257],["Hard Drinks","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,352.77,2,0.0613],["Hard Drinks","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,3,54.23,1,0.0372],["Hard Drinks","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,716.57,7,0.7633],["Hard Drinks","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,1,344.58,2,0.1221],["Hard Drinks","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,2,188.19,1,0.0],["Hard Drinks","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,609.4,4,0.1868],["Hard Drinks","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,1979.32,15,0.8789],["Hard Drinks","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,180.77,1,0.0167],["Hard Drinks","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,1,42.88,1,0.0307],["Hard Drinks","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,2,178.57,1,0.0168],["Hard Drinks","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,3,576.54,5,0.3425],["Hard Drinks","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,2010.79,14,0.8061],["Hard Drinks","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,5,157.09,1,0.048],["Hard Drinks","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,2,232.0,2,0.1264],["Hard Drinks","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,3,561.8,4,0.3072],["Hard Drinks","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,1788.07,13,0.5582],["Hard Drinks","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,5,159.09,1,0.0481],["Hard Drinks","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,2,158.66,1,0.1375],["Hard Drinks","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,3,116.15,1,0.0346],["Hard Drinks","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,640.23,6,0.3985],["Hard Drinks","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,3,214.46,2,0.0194],["Hard Drinks","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,2355.45,16,0.9664],["Hard Drinks","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,5,181.37,2,0.0912],["Hard Drinks","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,1,107.59,1,0.0153],["Hard Drinks","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,180.67,1,0.0169],["Hard Drinks","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,3205.92,26,1.703],["Hard Drinks","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,307.27,2,0.0905],["Health and Hygiene","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,1,356.83,2,0.1492],["Health and Hygiene","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,2,106.26,1,0.0271],["Health and Hygiene","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,3,277.81,2,0.1236],["Health and Hygiene","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,3598.32,27,2.5776],["Health and Hygiene","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,5,572.45,4,0.3201],["Health and Hygiene","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,5,81.46,1,0.0983],["Health and Hygiene","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,2,116.95,1,0.0086],["Health and Hygiene","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,3,825.65,7,0.4939],["Health and Hygiene","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,6711.44,49,2.5159],["Health and Hygiene","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,5,587.73,4,0.0946],["Health and Hygiene","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,3,154.46,1,0.1176],["Health and Hygiene","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,940.5,8,0.3183],["Health and Hygiene","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,5,73.2,2,0.0762],["Health and Hygiene","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,1,140.48,1,0.0682],["Health and Hygiene","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,3,661.94,3,0.178],["Health and Hygiene","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,4,5564.56,42,2.3603],["Health and Hygiene","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,5,454.04,4,0.1313],["Health and Hygiene","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,2,333.53,2,0.1339],["Health and Hygiene","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,1191.85,8,0.3636],["Health and Hygiene","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,5206.5,43,2.1038],["Health and Hygiene","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,608.05,5,0.1773],["Health and Hygiene","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,3,237.62,2,0.2614],["Health and Hygiene","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,3105.02,24,2.2306],["Health and Hygiene","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,5,628.25,4,0.1196],["Health and Hygiene","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,1,146.01,2,0.0717],["Health and Hygiene","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,2,189.85,2,0.0603],["Health and Hygiene","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,414.33,3,0.2777],["Health and Hygiene","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,6207.32,49,2.3636],["Health and Hygiene","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,713.63,4,0.1074],["Health and Hygiene","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,2,488.76,3,0.191],["Health and Hygiene","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,3,154.17,2,0.0891],["Health and Hygiene","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,5233.2,38,2.0678],["Health and Hygiene","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,5,721.83,7,0.4178],["Health and Hygiene","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,3,97.01,1,0.0181],["Health and Hygiene","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,210.1,3,0.1392],["Health and Hygiene","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,2,190.62,1,0.0306],["Health and Hygiene","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,3,625.59,4,0.133],["Health and Hygiene","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,4986.61,41,2.1704],["Health and Hygiene","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,5,883.42,5,0.2441],["Health and Hygiene","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,2,203.14,2,0.1377],["Health and Hygiene","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,3,664.87,4,0.1009],["Health and Hygiene","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,5622.5,45,2.3969],["Health and Hygiene","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,5,869.73,5,0.1212],["Health and Hygiene","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,2,34.82,1,0.0418],["Health and Hygiene","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,1154.63,7,0.3427],["Health and Hygiene","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,5507.42,41,2.0827],["Health and Hygiene","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,171.38,3,0.0578],["Household","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,2,149.74,1,0.0657],["Household","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,3,90.15,1,0.0691],["Household","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,4,572.72,5,0.8504],["Household","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,1,330.33,2,0.05],["Household","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,2,474.88,2,0.1359],["Household","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,3,337.39,2,0.2053],["Household","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,7071.2,49,4.4102],["Household","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,5,288.02,2,0.413],["Household","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,4,507.64,3,0.0804],["Household","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,1,299.21,2,0.0558],["Household","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,2,355.24,2,0.0677],["Household","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,3,787.01,6,0.1601],["Household","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,12585.38,83,4.4301],["Household","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,5,1124.2,10,0.8217],["Household","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,1,147.41,1,0.0248],["Household","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,2,145.78,1,0.0292],["Household","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,3,246.38,1,0.0268],["Household","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,4,4181.72,30,1.7791],["Household","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,5,500.08,3,0.1461],["Household","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,2,261.99,1,0.1193],["Household","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,3,462.63,2,0.1278],["Household","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,1384.04,8,0.3739],["Household","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,1,110.49,1,0.0285],["Household","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,2,174.31,2,0.1079],["Household","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,3,891.87,7,0.32],["Household","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,4,5426.31,37,1.9675],["Household","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,5,163.05,1,0.006],["Household","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,2,165.92,1,0.0067],["Household","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,1144.21,9,0.5588],["Household","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,11954.66,79,4.5109],["Household","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,979.86,6,0.3447],["Household","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,3,209.06,2,0.1303],["Household","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,7094.08,45,4.824],["Household","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,5,956.88,5,0.5817],["Household","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,1,128.37,1,0.0391],["Household","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,2,134.12,2,0.0495],["Household","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,495.13,5,0.2652],["Household","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,12736.3,83,4.5331],["Household","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,1012.44,8,0.5136],["Household","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,2,192.45,1,0.0667],["Household","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,3,1715.36,11,0.6825],["Household","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,12463.04,79,4.1511],["Household","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,5,1502.21,11,0.744],["Household","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,1,36.32,1,0.1852],["Household","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,3,209.63,1,0.0988],["Household","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,1893.94,15,0.7119],["Household","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,2,73.24,1,0.027],["Household","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,3,765.94,6,0.4001],["Household","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,10060.27,64,3.4637],["Household","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,5,1610.31,11,0.6306],["Household","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,2,255.47,1,0.1861],["Household","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,3,132.1,1,0.0612],["Household","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,13964.41,94,5.2202],["Household","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,5,1084.05,7,0.4609],["Household","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,2,310.03,2,0.2071],["Household","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,604.95,5,0.2203],["Household","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,11300.19,78,4.5206],["Household","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,1722.4,10,0.5358],["Meat","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,3,65.48,1,0.0634],["Meat","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,4,994.67,7,0.6139],["Meat","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,5,376.15,2,0.1524],["Meat","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,205.0,2,0.1613],["Meat","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,4,163.88,1,0.0545],["Meat","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,3,139.92,1,0.0167],["Meat","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,1923.59,13,0.5856],["Meat","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,5,89.42,1,0.0257],["Meat","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,3,76.07,1,0.0272],["Meat","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,4,1385.66,12,0.5984],["Meat","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,5,475.45,3,0.0578],["Meat","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,2,63.48,1,0.0107],["Meat","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,2488.19,18,1.036],["Meat","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,255.77,3,0.1856],["Meat","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,2,98.2,1,0.1723],["Meat","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,1341.29,11,1.0397],["Meat","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,5,140.32,1,0.0293],["Meat","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,2,98.9,1,0.0979],["Meat","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,252.84,2,0.1566],["Meat","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,2515.3,19,0.9001],["Meat","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,442.13,3,0.1885],["Meat","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,2239.49,17,0.8605],["Meat","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,5,159.66,1,0.1563],["Meat","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,372.65,2,0.0269],["Meat","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,3,250.34,2,0.0207],["Meat","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,1070.64,8,0.4147],["Meat","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,3,199.34,1,0.0073],["Meat","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,1986.45,14,0.8769],["Meat","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,5,272.05,3,0.0559],["Meat","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,353.17,4,0.2171],["Meat","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,1465.56,12,0.7073],["Meat","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,308.73,2,0.1108],["Meat","Regular","OUT010","Tier 3","High","Grocery Store",2011,2,224.84,1,0.0394],["Meat","Regular","OUT010","Tier 3","High","Grocery Store",2011,4,2443.05,19,1.9105],["Meat","Regular","OUT010","Tier 3","Small","Grocery Store",2011,4,151.14,1,0.0165],["Meat","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,1,247.31,2,0.0762],["Meat","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,3,157.99,1,0.1583],["Meat","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,4,2972.49,22,1.372],["Meat","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,5,96.31,1,0.0545],["Meat","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,3135.63,21,0.9284],["Meat","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,5,631.44,5,0.3644],["Meat","Regular","OUT017","Tier 2","Small","Supermarket Type1",2020,4,219.28,2,0.1551],["Meat","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,579.91,3,0.2758],["Meat","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,2934.58,20,1.5462],["Meat","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,44.01,1,0.0422],["Meat","Regular","OUT019","Tier 1","Small","Grocery Store",2018,2,450.28,2,0.0855],["Meat","Regular","OUT019","Tier 1","Small","Grocery Store",2018,4,2169.51,15,1.48],["Meat","Regular","OUT019","Tier 1","Small","Grocery Store",2018,5,257.23,2,0.136],["Meat","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,758.01,4,0.1808],["Meat","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,3030.05,23,1.7738],["Meat","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,735.9,4,0.2461],["Meat","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,1,223.54,1,0.0235],["Meat","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,2,48.37,1,0.0175],["Meat","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,4,2456.27,16,0.725],["Meat","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,5,1317.85,7,0.2916],["Meat","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,2,94.98,1,0.0],["Meat","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,4,3203.7,20,1.2076],["Meat","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,5,222.91,2,0.1834],["Meat","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,196.94,1,0.0338],["Meat","Regular","OUT045","Tier 2","Small","Supermarket Type1",2015,4,198.27,2,0.1163],["Meat","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,1,175.04,1,0.0369],["Meat","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,2,250.01,2,0.0655],["Meat","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,3,137.75,2,0.0709],["Meat","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,4,3084.45,18,1.0974],["Meat","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,5,331.1,3,0.1879],["Meat","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,290.45,2,0.1209],["Meat","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,3474.41,25,1.7836],["Meat","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,235.06,2,0.0391],["Others","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,1,163.62,1,0.0326],["Others","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,2,55.66,1,0.1978],["Others","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,4,349.82,3,0.3062],["Others","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,307.77,2,0.123],["Others","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,4,232.67,2,0.2875],["Others","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,5,132.13,1,0.0568],["Others","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,3,416.32,3,0.1698],["Others","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,1365.58,11,0.3952],["Others","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,5,339.32,2,0.2296],["Others","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,4,1061.82,8,0.468],["Others","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,5,707.32,5,0.3687],["Others","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,3,154.13,1,0.0233],["Others","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,397.02,2,0.1467],["Others","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,1,192.25,1,0.0908],["Others","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,2152.16,18,0.9007],["Others","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,211.86,1,0.0098],["Others","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,2117.38,16,1.34],["Others","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,5,108.23,1,0.0234],["Others","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,1495.46,13,0.9128],["Others","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,106.23,2,0.1445],["Others","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,2130.27,15,0.6509],["Others","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,5,106.13,1,0.0134],["Others","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,1,58.36,1,0.1184],["Others","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,103.1,1,0.0],["Others","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,2375.87,18,1.0303],["Others","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,1,237.52,2,0.1452],["Others","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,2,200.31,2,0.1339],["Others","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,2571.56,17,0.8882],["Others","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,5,112.52,1,0.0472],["Others","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,124.47,1,0.0068],["Others","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,2365.06,16,0.9192],["Seafood","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,4,107.56,1,0.036],["Seafood","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,158.46,1,0.0523],["Seafood","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,502.24,4,0.1924],["Seafood","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,4,362.46,3,0.1448],["Seafood","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,338.86,3,0.1496],["Seafood","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,270.25,2,0.114],["Seafood","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,5,34.22,1,0.1285],["Seafood","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,549.02,5,0.2137],["Seafood","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,2,50.8,1,0.0561],["Seafood","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,609.1,5,0.214],["Seafood","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,33.92,1,0.0736],["Seafood","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,3,105.96,1,0.0216],["Seafood","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,324.44,3,0.1214],["Seafood","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,310.66,2,0.0879],["Seafood","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,441.86,4,0.2151],["Seafood","Regular","OUT010","Tier 3","High","Grocery Store",2011,4,360.03,2,0.2708],["Seafood","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,4,172.08,1,0.1401],["Seafood","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,359.03,2,0.1627],["Seafood","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,751.13,4,0.4392],["Seafood","Regular","OUT019","Tier 1","Small","Grocery Store",2018,4,507.64,3,0.5017],["Seafood","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,319.18,2,0.2852],["Seafood","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,4,358.63,2,0.1618],["Seafood","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,1,185.06,1,0.0216],["Seafood","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,2,172.78,1,0.1405],["Seafood","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,4,390.19,2,0.0],["Seafood","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,4,409.26,2,0.2696],["Seafood","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,5,335.06,2,0.1679],["Seafood","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,169.78,1,0.1405],["Seafood","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,388.19,2,0.2761],["Snack Foods","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,2,152.0,1,0.1865],["Snack Foods","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,3,443.76,3,0.2189],["Snack Foods","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,4,4509.85,26,3.1561],["Snack Foods","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,5,611.7,4,0.3049],["Snack Foods","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,228.13,2,0.0501],["Snack Foods","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,5,288.89,2,0.3651],["Snack Foods","Low Fat","OUT010","Tier 3","Small","Grocery Store",2011,4,914.98,4,0.3021],["Snack Foods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,1,182.83,1,0.1164],["Snack Foods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,2,749.19,6,0.3558],["Snack Foods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,3,924.96,6,0.2767],["Snack Foods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,8318.14,50,2.9283],["Snack Foods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,5,744.96,5,0.3405],["Snack Foods","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,3,1287.98,8,0.2634],["Snack Foods","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,4,6804.62,46,3.0717],["Snack Foods","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,5,846.76,5,0.3184],["Snack Foods","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,1,116.88,1,0.0371],["Snack Foods","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,1431.17,9,0.4244],["Snack Foods","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,5,174.31,1,0.0253],["Snack Foods","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,2,248.41,1,0.0205],["Snack Foods","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,1590.33,10,0.5175],["Snack Foods","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,8408.87,55,3.4935],["Snack Foods","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,1486.14,9,0.6283],["Snack Foods","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,2,154.53,1,0.0],["Snack Foods","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,3,305.87,2,0.3784],["Snack Foods","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,6199.98,40,5.1122],["Snack Foods","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,5,383.1,2,0.2265],["Snack Foods","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,1,626.52,3,0.1417],["Snack Foods","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,2,357.43,2,0.0842],["Snack Foods","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,1339.03,8,0.5715],["Snack Foods","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,9756.85,64,3.7594],["Snack Foods","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,792.43,5,0.4995],["Snack Foods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,1,550.59,4,0.3058],["Snack Foods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,2,574.99,4,0.3845],["Snack Foods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,3,949.89,6,0.1834],["Snack Foods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,10446.57,67,4.4098],["Snack Foods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,5,1226.57,8,0.5435],["Snack Foods","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,2,94.71,1,0.1603],["Snack Foods","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,1007.79,8,0.3935],["Snack Foods","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,3,809.25,4,0.2357],["Snack Foods","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,9167.07,58,3.9083],["Snack Foods","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,5,315.09,2,0.0743],["Snack Foods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,1,97.3,1,0.0395],["Snack Foods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,2,437.73,2,0.1054],["Snack Foods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,3,622.33,3,0.1936],["Snack Foods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,7919.98,55,3.6921],["Snack Foods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,5,1060.59,6,0.3621],["Snack Foods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,1,456.18,3,0.1682],["Snack Foods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,2,253.64,1,0.0262],["Snack Foods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,357.07,2,0.0473],["Snack Foods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,10828.07,71,4.6882],["Snack Foods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,740.73,4,0.2342],["Snack Foods","Regular","OUT010","Tier 3","High","Grocery Store",2011,3,114.75,1,0.0551],["Snack Foods","Regular","OUT010","Tier 3","High","Grocery Store",2011,4,2152.07,17,1.2195],["Snack Foods","Regular","OUT010","Tier 3","Medium","Grocery Store",2011,4,157.57,2,0.1005],["Snack Foods","Regular","OUT010","Tier 3","Small","Grocery Store",2011,4,964.01,8,0.7583],["Snack Foods","Regular","OUT010","Tier 3","Small","Grocery Store",2011,5,112.05,1,0.0311],["Snack Foods","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,2,271.58,2,0.1502],["Snack Foods","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,3,551.04,6,0.2797],["Snack Foods","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,4,6060.18,46,2.8689],["Snack Foods","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,5,428.01,3,0.142],["Snack Foods","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,1,106.63,1,0.0378],["Snack Foods","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,2,65.75,1,0.0707],["Snack Foods","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,3,253.4,3,0.2368],["Snack Foods","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,6439.85,48,2.7234],["Snack Foods","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,5,311.7,4,0.3903],["Snack Foods","Regular","OUT017","Tier 2","Small","Supermarket Type1",2020,4,263.76,1,0.0],["Snack Foods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,1,111.85,1,0.08],["Snack Foods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,654.38,4,0.2678],["Snack Foods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,6921.85,48,3.0051],["Snack Foods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,581.41,4,0.0778],["Snack Foods","Regular","OUT019","Tier 1","Small","Grocery Store",2018,2,57.66,1,0.0192],["Snack Foods","Regular","OUT019","Tier 1","Small","Grocery Store",2018,3,245.34,3,0.5141],["Snack Foods","Regular","OUT019","Tier 1","Small","Grocery Store",2018,4,3043.97,24,2.0769],["Snack Foods","Regular","OUT019","Tier 1","Small","Grocery Store",2018,5,287.62,2,0.2077],["Snack Foods","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,1,139.18,1,0.1289],["Snack Foods","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,2,56.46,1,0.0127],["Snack Foods","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,811.38,5,0.2843],["Snack Foods","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,5760.33,47,2.6138],["Snack Foods","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,167.08,1,0.0109],["Snack Foods","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,1,158.96,1,0.1175],["Snack Foods","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,4,6253.94,48,2.7616],["Snack Foods","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,5,275.71,2,0.1112],["Snack Foods","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,1,58.26,1,0.011],["Snack Foods","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,2,228.04,2,0.2136],["Snack Foods","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,3,723.42,6,0.4133],["Snack Foods","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,4,5166.96,39,2.5588],["Snack Foods","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,5,1004.32,6,0.3149],["Snack Foods","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,3,55.86,1,0.0],["Snack Foods","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,671.23,4,0.2805],["Snack Foods","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,5,88.69,1,0.038],["Snack Foods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,1,97.24,1,0.0392],["Snack Foods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,3,263.82,3,0.0791],["Snack Foods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,4,5937.9,43,2.673],["Snack Foods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,5,805.69,6,0.2686],["Snack Foods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,1,323.81,2,0.1374],["Snack Foods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,2,264.76,1,0.0743],["Snack Foods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,1208.96,9,0.4254],["Snack Foods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,5173.63,38,2.6184],["Snack Foods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,1285.13,8,0.3902],["Soft Drinks","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,2,141.48,1,0.0945],["Soft Drinks","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,3,313.39,3,0.1904],["Soft Drinks","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,4,1759.7,11,1.5082],["Soft Drinks","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,5,355.41,3,0.1812],["Soft Drinks","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,4,621.09,5,0.2298],["Soft Drinks","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,1,218.05,1,0.0203],["Soft Drinks","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,2,166.45,1,0.0372],["Soft Drinks","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,3,590.5,4,0.3072],["Soft Drinks","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,4040.05,32,1.5307],["Soft Drinks","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,5,242.69,2,0.1684],["Soft Drinks","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,2,194.58,2,0.025],["Soft Drinks","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,3,230.16,2,0.2067],["Soft Drinks","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,4,3850.51,25,1.4683],["Soft Drinks","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,5,518.22,3,0.2593],["Soft Drinks","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,421.88,4,0.2903],["Soft Drinks","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,5,91.91,1,0.0737],["Soft Drinks","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,3,62.62,1,0.0494],["Soft Drinks","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,4,484.6,4,0.2449],["Soft Drinks","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,2,326.04,3,0.1215],["Soft Drinks","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,460.77,3,0.1257],["Soft Drinks","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,4311.11,31,2.0612],["Soft Drinks","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,652.48,4,0.1315],["Soft Drinks","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,3,671.96,3,0.4774],["Soft Drinks","Low Fat","OUT019","Tier 1","Small","Grocery Store",2018,4,2373.74,19,1.8283],["Soft Drinks","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,3,207.96,2,0.1204],["Soft Drinks","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,4072.66,32,1.6699],["Soft Drinks","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,255.7,3,0.2762],["Soft Drinks","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,1,316.85,2,0.014],["Soft Drinks","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,3,724.06,5,0.3411],["Soft Drinks","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,4073.6,32,1.9401],["Soft Drinks","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,5,665.57,4,0.324],["Soft Drinks","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,450.05,3,0.2609],["Soft Drinks","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,2,326.81,2,0.0206],["Soft Drinks","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,3,603.31,4,0.363],["Soft Drinks","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,4006.1,33,1.637],["Soft Drinks","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,5,679.25,4,0.1535],["Soft Drinks","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,1,219.75,2,0.1013],["Soft Drinks","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,2,145.21,1,0.0146],["Soft Drinks","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,3,486.17,4,0.1867],["Soft Drinks","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,4523.49,33,2.0252],["Soft Drinks","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,5,349.62,3,0.1384],["Soft Drinks","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,2,146.57,2,0.1102],["Soft Drinks","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,427.71,2,0.1345],["Soft Drinks","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,3732.59,30,1.8539],["Soft Drinks","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,5,356.0,3,0.1592],["Soft Drinks","Regular","OUT010","Tier 3","Small","Grocery Store",2011,4,811.91,5,0.4635],["Soft Drinks","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,4,1148.06,8,0.5411],["Soft Drinks","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,5,50.37,1,0.0192],["Soft Drinks","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,3,37.48,1,0.025],["Soft Drinks","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,971.61,9,0.5818],["Soft Drinks","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,5,183.29,1,0.0],["Soft Drinks","Regular","OUT017","Tier 2","Small","Supermarket Type1",2020,4,233.5,1,0.0776],["Soft Drinks","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,2,48.27,1,0.0193],["Soft Drinks","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,490.97,4,0.3356],["Soft Drinks","Regular","OUT019","Tier 1","Small","Grocery Store",2018,4,624.69,4,0.62],["Soft Drinks","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,1012.78,8,0.5531],["Soft Drinks","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,1,232.5,1,0.0772],["Soft Drinks","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,2,96.54,2,0.086],["Soft Drinks","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,3,42.91,1,0.1091],["Soft Drinks","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,4,701.43,5,0.2763],["Soft Drinks","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,4,273.88,4,0.3457],["Soft Drinks","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,5,122.57,1,0.0],["Soft Drinks","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,4,491.66,5,0.3012],["Soft Drinks","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,122.04,1,0.1128],["Soft Drinks","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,949.29,8,0.4479],["Starchy Foods","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,4,374.12,2,0.3064],["Starchy Foods","Low Fat","OUT010","Tier 3","High","Grocery Store",2011,5,261.43,1,0.1165],["Starchy Foods","Low Fat","OUT010","Tier 3","Medium","Grocery Store",2011,1,34.05,1,0.1043],["Starchy Foods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,2,191.88,1,0.0],["Starchy Foods","Low Fat","OUT013","Tier 3","High","Supermarket Type1",2014,4,1981.68,12,0.8778],["Starchy Foods","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,3,262.83,1,0.07],["Starchy Foods","Low Fat","OUT017","Tier 2","High","Supermarket Type1",2020,4,1325.94,9,0.4861],["Starchy Foods","Low Fat","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,224.14,1,0.0612],["Starchy Foods","Low Fat","OUT017","Tier 2","Small","Supermarket Type1",2020,4,36.72,1,0.0435],["Starchy Foods","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,124.9,1,0.0715],["Starchy Foods","Low Fat","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,1237.16,8,0.4745],["Starchy Foods","Low Fat","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,1215.92,8,0.4373],["Starchy Foods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,3,254.7,1,0.0],["Starchy Foods","Low Fat","OUT035","Tier 2","Small","Supermarket Type1",2017,4,1587.04,11,0.7006],["Starchy Foods","Low Fat","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,206.96,1,0.1231],["Starchy Foods","Low Fat","OUT045","Tier 2","Small","Supermarket Type1",2015,4,908.55,6,0.3152],["Starchy Foods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,1,194.08,1,0.0759],["Starchy Foods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,2,223.97,1,0.0976],["Starchy Foods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,3,180.76,1,0.0413],["Starchy Foods","Low Fat","OUT046","Tier 1","Small","Supermarket Type1",2016,4,762.34,5,0.4619],["Starchy Foods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,1,222.87,1,0.0978],["Starchy Foods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,2,107.39,1,0.1542],["Starchy Foods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,125.7,1,0.0714],["Starchy Foods","Low Fat","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,908.42,6,0.2779],["Starchy Foods","Regular","OUT010","Tier 3","Medium","Grocery Store",2011,4,58.89,1,0.0735],["Starchy Foods","Regular","OUT010","Tier 3","Small","Grocery Store",2011,4,520.56,4,0.7715],["Starchy Foods","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,4,420.02,4,0.3794],["Starchy Foods","Regular","OUT013","Tier 3","High","Supermarket Type1",2014,5,411.4,2,0.1406],["Starchy Foods","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,4,525.35,5,0.2577],["Starchy Foods","Regular","OUT017","Tier 2","Medium","Supermarket Type1",2020,5,226.61,1,0.0056],["Starchy Foods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,3,64.42,1,0.0549],["Starchy Foods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,4,927.7,6,0.3276],["Starchy Foods","Regular","OUT018","Tier 3","Medium","Supermarket Type2",2022,5,226.21,1,0.0056],["Starchy Foods","Regular","OUT019","Tier 1","Small","Grocery Store",2018,4,410.1,2,0.2463],["Starchy Foods","Regular","OUT019","Tier 1","Small","Grocery Store",2018,5,266.85,2,0.1255],["Starchy Foods","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,4,549.78,4,0.2059],["Starchy Foods","Regular","OUT027","Tier 3","Medium","Supermarket Type3",2018,5,237.39,2,0.0614],["Starchy Foods","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,3,253.31,2,0.1033],["Starchy Foods","Regular","OUT035","Tier 2","Small","Supermarket Type1",2017,4,736.6,5,0.342],["Starchy Foods","Regular","OUT045","Tier 2","High","Supermarket Type1",2015,4,636.57,5,0.1697],["Starchy Foods","Regular","OUT045","Tier 2","Medium","Supermarket Type1",2015,4,345.25,3,0.3381],["Starchy Foods","Regular","OUT045","Tier 2","Small","Supermarket Type1",2015,4,92.68,1,0.0648],["Starchy Foods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,4,666.93,6,0.3358],["Starchy Foods","Regular","OUT046","Tier 1","Small","Supermarket Type1",2016,5,173.57,1,0.007],["Starchy Foods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,3,63.62,1,0.0],["Starchy Foods","Regular","OUT049","Tier 1","Medium","Supermarket Type1",2012,4,1112.65,7,0.5173]];
+const DATA = RAW.map(r => {
+  const o = {};
+  COLS.forEach((c,i)=> o[c] = r[i]);
+  return o;
+});
+const TOTAL_RECORDS = DATA.reduce((s,r)=> s + r.count, 0);
+
+/* ======================= CONSTANTS ======================= */
+const COLORS = {
+  yellow:'#F8CB45', yellowDeep:'#E8A91A', gold:'#996F0F',
+  green:'#1AAB40', greenDeep:'#0B6B1E',
+  ink:'#1C1C1C', muted:'#6D695F'
+};
+
+const LOCATION_TYPES = ['Tier 1','Tier 2','Tier 3'];
+const OUTLET_SIZES = ['Small','Medium','High'];
+const FAT_CONTENTS = ['Low Fat','Regular'];
+const OUTLET_TYPES = ['Grocery Store','Supermarket Type1','Supermarket Type2','Supermarket Type3'];
+const OUTLET_TYPE_LABEL = {
+  'Grocery Store':'Grocery Store','Supermarket Type1':'Supermarket Type 1',
+  'Supermarket Type2':'Supermarket Type 2','Supermarket Type3':'Supermarket Type 3'
+};
+const YEARS = [...new Set(DATA.map(d=>d.year))].sort((a,b)=>a-b);
+
+const ITEM_TYPES = (() => {
+  const totals = new Map();
+  DATA.forEach(d => totals.set(d.itemType, (totals.get(d.itemType)||0) + d.sales));
+  return [...totals.entries()].sort((a,b)=> b[1]-a[1]).map(e=>e[0]);
+})();
+
+const TIER_COLOR = {'Tier 1':COLORS.yellow,'Tier 2':COLORS.green,'Tier 3':COLORS.ink};
+const SIZE_COLOR = {'Small':COLORS.yellow,'Medium':COLORS.green,'High':COLORS.ink};
+const FAT_COLOR = {'Low Fat':COLORS.green,'Regular':COLORS.yellow};
+
+const METRICS = [
+  {key:'sales', label:'Total Sales'},
+  {key:'avgSales', label:'Avg Sales'},
+  {key:'count', label:'No. of Items'},
+  {key:'rating', label:'Avg Rating'},
+];
+let selectedMetric = 'sales';
+
+/* ======================= FORMATTERS ======================= */
+const fmtINR = new Intl.NumberFormat('en-IN', {style:'currency', currency:'INR', maximumFractionDigits:0});
+const fmtINR2 = new Intl.NumberFormat('en-IN', {style:'currency', currency:'INR', maximumFractionDigits:2});
+const fmtNum = new Intl.NumberFormat('en-IN');
+const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function compactINR(v){
+  if (v>=1e7) return '\u20B9' + (v/1e7).toFixed(2) + 'Cr';
+  if (v>=1e5) return '\u20B9' + (v/1e5).toFixed(2) + 'L';
+  if (v>=1e3) return '\u20B9' + (v/1e3).toFixed(1) + 'K';
+  return '\u20B9' + Math.round(v);
+}
+function fmtMetric(key, v){
+  if (key==='sales') return fmtINR.format(v);
+  if (key==='avgSales') return fmtINR2.format(v);
+  if (key==='count') return fmtNum.format(Math.round(v));
+  if (key==='rating') return v.toFixed(2);
+  return String(v);
+}
+
+/* ======================= FILTER STATE ======================= */
+const filters = {
+  locationType: new Set(),
+  outletSize: new Set(),
+  itemType: new Set(),
+  fatContent: new Set(),
+  outletType: new Set(),
+  year: new Set(),
+};
+const DIM_LABEL = {
+  locationType:'Outlet Location', outletSize:'Outlet Size', itemType:'Item Type',
+  fatContent:'Fat Content', outletType:'Outlet Type', year:'Est. Year'
+};
+
+function toggleFilter(dim, val){
+  const set = filters[dim];
+  if (set.has(val)) set.delete(val); else set.add(val);
+  syncCheckboxes();
+  render();
+}
+function clearAllFilters(){
+  Object.values(filters).forEach(s=>s.clear());
+  selectedMetric = 'sales';
+  syncCheckboxes();
+  render();
+}
+
+function getFiltered(){
+  return DATA.filter(d =>
+    (filters.locationType.size===0 || filters.locationType.has(d.locationType)) &&
+    (filters.outletSize.size===0 || filters.outletSize.has(d.outletSize)) &&
+    (filters.itemType.size===0 || filters.itemType.has(d.itemType)) &&
+    (filters.fatContent.size===0 || filters.fatContent.has(d.fatContent)) &&
+    (filters.outletType.size===0 || filters.outletType.has(d.outletType)) &&
+    (filters.year.size===0 || filters.year.has(d.year))
+  );
+}
+
+/* ======================= AGGREGATION HELPERS ======================= */
+function aggregate(rows, keyFn, keys){
+  const map = new Map(keys.map(k => [k, {sales:0,count:0,visibility:0,ratingW:0}]));
+  rows.forEach(r=>{
+    const k = keyFn(r);
+    if (!map.has(k)) return;
+    const c = map.get(k);
+    c.sales += r.sales; c.count += r.count; c.visibility += r.visibility; c.ratingW += r.rating*r.count;
+  });
+  return keys.map(k=>{
+    const c = map.get(k);
+    return { key:k, sales:c.sales, count:c.count, avgSales: c.count? c.sales/c.count : 0, rating: c.count? c.ratingW/c.count : 0, visibility: c.count? c.visibility/c.count : 0 };
+  });
+}
+function metricValue(row, key){
+  if (key==='sales') return row.sales;
+  if (key==='avgSales') return row.avgSales;
+  if (key==='count') return row.count;
+  if (key==='rating') return row.rating;
+  return 0;
+}
+
+/* ======================= CHART.JS SETUP ======================= */
+Chart.defaults.font.family = "'Inter', ui-sans-serif, sans-serif";
+Chart.defaults.color = COLORS.muted;
+Chart.defaults.borderColor = '#EDEAE1';
+
+function baseTooltip(valueFmt){
+  return {
+    backgroundColor: COLORS.ink, titleColor: COLORS.yellow, bodyColor: '#fff',
+    padding:10, cornerRadius:8, displayColors:false, titleFont:{weight:'700', size:12}, bodyFont:{size:12.5,weight:'600'},
+    callbacks: { label: (ctx) => ' ' + valueFmt(ctx.raw ?? ctx.parsed.x ?? ctx.parsed.y) }
+  };
+}
+function animOpts(){
+  return reduceMotion() ? false : { duration:200, easing:'easeInOutQuad' };
+}
+
+let chartItemType, chartFatDonut, chartSizeDonut, chartClustered, chartYear;
+
+function initCharts(){
+  // Item type horizontal bar
+  const ctxIT = document.getElementById('chartItemType').getContext('2d');
+  chartItemType = new Chart(ctxIT, {
+    type:'bar',
+    data:{ labels: ITEM_TYPES, datasets:[{ data: ITEM_TYPES.map(()=>0), backgroundColor: COLORS.green, borderRadius:5, maxBarThickness:20 }]},
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false, animation: animOpts(),
+      onClick:(evt, els)=>{ if(!els.length) return; toggleFilter('itemType', ITEM_TYPES[els[0].index]); },
+      onHover:(evt, els)=>{ evt.native.target.style.cursor = els.length? 'pointer':'default'; },
+      plugins:{ legend:{display:false}, tooltip: baseTooltip(v=>fmtINR.format(v)) },
+      scales:{
+        x:{ grid:{color:'#EFECE3'}, ticks:{ callback:(v)=>compactINR(v), font:{size:10} } },
+        y:{ grid:{display:false}, ticks:{ font:{size:11, weight:'600'}, color: COLORS.ink } }
+      }
+    }
+  });
+
+  // Fat content donut
+  const ctxFat = document.getElementById('chartFatDonut').getContext('2d');
+  chartFatDonut = new Chart(ctxFat, {
+    type:'doughnut',
+    data:{ labels: FAT_CONTENTS, datasets:[{ data: FAT_CONTENTS.map(()=>0), backgroundColor: FAT_CONTENTS.map(f=>FAT_COLOR[f]), borderWidth:3, borderColor:'#fff', hoverOffset:4 }]},
+    options:{
+      cutout:'72%', responsive:true, maintainAspectRatio:false, animation: animOpts(),
+      onClick:(evt, els)=>{ if(!els.length) return; toggleFilter('fatContent', FAT_CONTENTS[els[0].index]); },
+      onHover:(evt, els)=>{ evt.native.target.style.cursor = els.length? 'pointer':'default'; },
+      plugins:{ legend:{display:false}, tooltip: baseTooltip(v=>fmtINR.format(v)) }
+    }
+  });
+
+  // Outlet size donut
+  const ctxSize = document.getElementById('chartSizeDonut').getContext('2d');
+  chartSizeDonut = new Chart(ctxSize, {
+    type:'doughnut',
+    data:{ labels: OUTLET_SIZES, datasets:[{ data: OUTLET_SIZES.map(()=>0), backgroundColor: OUTLET_SIZES.map(s=>SIZE_COLOR[s]), borderWidth:3, borderColor:'#fff', hoverOffset:4 }]},
+    options:{
+      cutout:'70%', responsive:true, maintainAspectRatio:false, animation: animOpts(),
+      onClick:(evt, els)=>{ if(!els.length) return; toggleFilter('outletSize', OUTLET_SIZES[els[0].index]); },
+      onHover:(evt, els)=>{ evt.native.target.style.cursor = els.length? 'pointer':'default'; },
+      plugins:{ legend:{display:false}, tooltip: baseTooltip(v=>fmtNum.format(Math.round(v)) + ' items') }
+    }
+  });
+
+  // Clustered bar (location x fat content)
+  const ctxCl = document.getElementById('chartClustered').getContext('2d');
+  chartClustered = new Chart(ctxCl, {
+    type:'bar',
+    data:{
+      labels: LOCATION_TYPES,
+      datasets: FAT_CONTENTS.map(fc => ({ label: fc, data: LOCATION_TYPES.map(()=>0), backgroundColor: FAT_COLOR[fc], borderRadius:4, maxBarThickness:16 }))
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false, animation: animOpts(),
+      onClick:(evt, els)=>{ if(!els.length) return; toggleFilter('locationType', LOCATION_TYPES[els[0].index]); },
+      onHover:(evt, els)=>{ evt.native.target.style.cursor = els.length? 'pointer':'default'; },
+      plugins:{ legend:{display:false}, tooltip: baseTooltip(v=>fmtINR.format(v)) },
+      scales:{
+        x:{ grid:{color:'#EFECE3'}, ticks:{ callback:(v)=>compactINR(v), font:{size:10} } },
+        y:{ grid:{display:false}, ticks:{ font:{size:11, weight:'600'}, color: COLORS.ink } }
+      }
+    }
+  });
+
+  // Year line chart
+  const ctxYr = document.getElementById('chartYear').getContext('2d');
+  const yrGrad = ctxYr.createLinearGradient(0,0,0,240);
+  yrGrad.addColorStop(0, 'rgba(26,171,64,0.28)');
+  yrGrad.addColorStop(1, 'rgba(26,171,64,0.0)');
+  chartYear = new Chart(ctxYr, {
+    type:'line',
+    data:{ labels: YEARS.map(String), datasets:[{ data: YEARS.map(()=>0), borderColor: COLORS.greenDeep, backgroundColor:yrGrad, fill:true, tension:.35, pointBackgroundColor: COLORS.yellow, pointBorderColor: COLORS.ink, pointBorderWidth:1.5, pointRadius:4, pointHoverRadius:7, borderWidth:2.5 }]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation: animOpts(),
+      onClick:(evt)=>{
+        const pts = chartYear.getElementsAtEventForMode(evt, 'nearest', {intersect:true}, true);
+        if(!pts.length) return; toggleFilter('year', YEARS[pts[0].index]);
+      },
+      onHover:(evt, els)=>{ evt.native.target.style.cursor = els.length? 'pointer':'default'; },
+      plugins:{ legend:{display:false}, tooltip: baseTooltip(v=>fmtINR.format(v)) },
+      scales:{
+        x:{ grid:{display:false}, ticks:{ font:{size:10.5, weight:'600'} } },
+        y:{ grid:{color:'#EFECE3'}, ticks:{ callback:(v)=>compactINR(v), font:{size:10} } }
+      }
+    }
+  });
+}
+
+/* ======================= RENDER: SIDEBAR FILTER GROUPS ======================= */
+function slug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
+const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function buildFilterGroupHTML(title, dim, options, scrollable, prefix){
+  const items = options.map(opt=>{
+    const id = prefix + '-f-' + dim + '-' + slug(opt) ;
+    return '<label class="filter-check" for="'+id+'">'
+      + '<input type="checkbox" id="'+id+'" data-dim="'+dim+'" data-val="'+opt+'" />'
+      + '<span class="box">'+CHECK_SVG+'</span>'
+      + '<span class="checkbox-label">'+opt+'</span>'
+      + '<span class="count-pill" data-count-for="'+dim+'::'+opt+'">&nbsp;</span>'
+      + '</label>';
+  }).join('');
+  return '<div>'
+    + '<p class="eyebrow mb-1.5">'+title+'</p>'
+    + '<div class="'+(scrollable? 'scroll-panel space-y-0.5' : 'space-y-0.5')+'">'+items+'</div>'
+    + '</div>';
+}
+
+function buildAllFilterGroups(container, prefix){
+  container.innerHTML =
+    buildFilterGroupHTML('Outlet Location', 'locationType', LOCATION_TYPES, false, prefix) +
+    buildFilterGroupHTML('Outlet Size', 'outletSize', OUTLET_SIZES, false, prefix) +
+    buildFilterGroupHTML('Item Type', 'itemType', ITEM_TYPES, true, prefix);
+}
+
+function wireFilterGroup(container){
+  container.addEventListener('change', (e)=>{
+    const input = e.target.closest('input[data-dim]');
+    if(!input) return;
+    toggleFilter(input.dataset.dim, input.dataset.val);
+  });
+}
+
+function syncCheckboxes(){
+  document.querySelectorAll('input[data-dim]').forEach(inp=>{
+    inp.checked = filters[inp.dataset.dim].has(inp.dataset.val);
+  });
+}
+
+/* ======================= RENDER: METRIC SEGMENT CONTROL ======================= */
+function buildMetricSeg(){
+  const el = document.getElementById('metricSeg');
+  el.innerHTML = METRICS.map(m =>
+    '<button type="button" class="seg-btn" data-metric="'+m.key+'" aria-pressed="'+(m.key===selectedMetric)+'">'+m.label+'</button>'
+  ).join('');
+  el.addEventListener('click', (e)=>{
+    const btn = e.target.closest('button[data-metric]');
+    if(!btn) return;
+    selectedMetric = btn.dataset.metric;
+    render();
+  });
+}
+function syncMetricSeg(){
+  document.querySelectorAll('#metricSeg button[data-metric]').forEach(b=>{
+    b.setAttribute('aria-pressed', String(b.dataset.metric === selectedMetric));
+  });
+}
+
+/* ======================= STARS ======================= */
+function renderStars(container, value){
+  const full = Math.round(value);
+  let html = '';
+  for(let i=1;i<=5;i++){
+    html += '<svg width="13" height="13" viewBox="0 0 24 24" fill="'+(i<=full? COLORS.gold : '#E7E4DD')+'"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.8L6 21l1.6-7L2.2 9.2l7.1-.6L12 2z"/></svg>';
+  }
+  container.innerHTML = html;
+}
+
+/* ======================= KPI count-up ======================= */
+function animateValue(el, from, to, fmt){
+  if (reduceMotion() || from===to){ el.textContent = fmt(to); return; }
+  const dur = 300; const start = performance.now();
+  function tick(now){
+    const p = Math.min(1, (now-start)/dur);
+    const eased = 1 - Math.pow(1-p, 3);
+    el.textContent = fmt(from + (to-from)*eased);
+    if(p<1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+const kpiPrev = { sales:0, items:0, rating:0, avgSales:0 };
+
+/* ======================= MAIN RENDER ======================= */
+function render(){
+  const rows = getFiltered();
+  const filteredCount = rows.reduce((s,r)=>s+r.count, 0);
+
+  document.getElementById('emptyState').classList.toggle('hidden', filteredCount>0);
+  document.getElementById('chartGrid').classList.toggle('hidden', filteredCount===0);
+
+  // ---- KPIs ----
+  let sales=0, ratingW=0;
+  rows.forEach(r=>{ sales += r.sales; ratingW += r.rating*r.count; });
+  const avgSales = filteredCount? sales/filteredCount : 0;
+  const avgRating = filteredCount? ratingW/filteredCount : 0;
+
+  const elSales = document.querySelector('#kpiTotalSales [data-kpi-value]');
+  const elItems = document.querySelector('#kpiItems [data-kpi-value]');
+  const elRating = document.querySelector('#kpiRating [data-kpi-value]');
+  const elAvg = document.querySelector('#kpiAvgSales [data-kpi-value]');
+
+  animateValue(elSales, kpiPrev.sales, sales, v=>fmtINR.format(v));
+  animateValue(elItems, kpiPrev.items, filteredCount, v=>fmtNum.format(Math.round(v)));
+  animateValue(elRating, kpiPrev.rating, avgRating, v=>v.toFixed(2));
+  animateValue(elAvg, kpiPrev.avgSales, avgSales, v=>fmtINR2.format(v));
+  renderStars(document.getElementById('ratingStars'), avgRating);
+  kpiPrev.sales=sales; kpiPrev.items=filteredCount; kpiPrev.rating=avgRating; kpiPrev.avgSales=avgSales;
+
+  // ---- Item type bar ----
+  const itAgg = aggregate(rows, r=>r.itemType, ITEM_TYPES);
+  chartItemType.data.datasets[0].data = itAgg.map(a=>a.sales);
+  chartItemType.data.datasets[0].backgroundColor = ITEM_TYPES.map(t => filters.itemType.size && !filters.itemType.has(t) ? '#D9E9DC' : COLORS.green);
+  chartItemType.update();
+
+  // ---- Fat content donut ----
+  const fatAgg = aggregate(rows, r=>r.fatContent, FAT_CONTENTS);
+  chartFatDonut.data.datasets[0].data = fatAgg.map(a=>a.sales);
+  chartFatDonut.data.datasets[0].backgroundColor = FAT_CONTENTS.map(f => filters.fatContent.size && !filters.fatContent.has(f) ? '#EDEAE1' : FAT_COLOR[f]);
+  chartFatDonut.update();
+  document.getElementById('fatDonutCenter').textContent = compactINR(sales);
+  renderSwatchLegend('fatLegend', FAT_CONTENTS, fatAgg, FAT_COLOR, 'fatContent', v=>fmtINR.format(v));
+
+  // ---- Outlet size donut ----
+  const sizeAgg = aggregate(rows, r=>r.outletSize, OUTLET_SIZES);
+  chartSizeDonut.data.datasets[0].data = sizeAgg.map(a=>a.count);
+  chartSizeDonut.data.datasets[0].backgroundColor = OUTLET_SIZES.map(s => filters.outletSize.size && !filters.outletSize.has(s) ? '#EDEAE1' : SIZE_COLOR[s]);
+  chartSizeDonut.update();
+  document.getElementById('sizeDonutCenter').textContent = fmtNum.format(filteredCount);
+  renderSwatchLegend('sizeLegend', OUTLET_SIZES, sizeAgg, SIZE_COLOR, 'outletSize', v=>fmtNum.format(Math.round(v))+' items');
+
+  // ---- Clustered bar ----
+  FAT_CONTENTS.forEach((fc, i)=>{
+    const subset = rows.filter(r=>r.fatContent===fc);
+    const agg = aggregate(subset, r=>r.locationType, LOCATION_TYPES);
+    chartClustered.data.datasets[i].data = agg.map(a=>a.sales);
+    chartClustered.data.datasets[i].backgroundColor = filters.fatContent.size && !filters.fatContent.has(fc) ? '#EDEAE1' : FAT_COLOR[fc];
+  });
+  chartClustered.update();
+  renderClusteredLegend();
+
+  // ---- Year line ----
+  const yrAgg = aggregate(rows, r=>r.year, YEARS);
+  chartYear.data.datasets[0].data = yrAgg.map(a=>a.sales);
+  chartYear.update();
+  renderYearChips(yrAgg);
+
+  // ---- Funnel ----
+  syncMetricSeg();
+  renderFunnel(rows);
+
+  // ---- Pivot table ----
+  renderPivot(rows);
+
+  // ---- chips + counts + live region ----
+  renderChips();
+  renderSidebarCounts(rows);
+  document.getElementById('liveStatus').textContent =
+    filteredCount===TOTAL_RECORDS
+      ? 'Showing all ' + fmtNum.format(TOTAL_RECORDS) + ' orders.'
+      : 'Filtered to ' + fmtNum.format(filteredCount) + ' of ' + fmtNum.format(TOTAL_RECORDS) + ' orders. Total sales ' + fmtINR.format(sales) + '.';
+}
+
+function renderSwatchLegend(containerId, labels, agg, colorMap, dim, valFmt){
+  const el = document.getElementById(containerId);
+  el.innerHTML = labels.map((l,i)=>{
+    const active = filters[dim].has(l);
+    const dim_ = filters[dim].size>0 && !active;
+    return '<button type="button" class="legend-btn'+(dim_?' dim':'')+'" data-dim="'+dim+'" data-val="'+l+'" aria-pressed="'+active+'">'
+      + '<span class="swatch" style="background:'+colorMap[l]+'"></span>'
+      + '<span>'+l+'</span>'
+      + '<span class="legend-val tnum">'+valFmt(agg[i][dim==='outletSize'? 'count':'sales'])+'</span>'
+      + '</button>';
+  }).join('');
+  el.querySelectorAll('button[data-dim]').forEach(b=>{
+    b.addEventListener('click', ()=> toggleFilter(b.dataset.dim, b.dataset.val));
+  });
+}
+
+function renderClusteredLegend(){
+  const el = document.getElementById('clusteredLegend');
+  el.innerHTML = FAT_CONTENTS.map(fc=>{
+    const active = filters.fatContent.has(fc);
+    return '<button type="button" class="legend-btn" style="width:auto" data-dim="fatContent" data-val="'+fc+'" aria-pressed="'+active+'">'
+      + '<span class="swatch" style="background:'+FAT_COLOR[fc]+'"></span><span>'+fc+'</span></button>';
+  }).join('');
+  el.querySelectorAll('button[data-dim]').forEach(b=>{
+    b.addEventListener('click', ()=> toggleFilter(b.dataset.dim, b.dataset.val));
+  });
+}
+
+function renderYearChips(yrAgg){
+  const el = document.getElementById('yearChips');
+  el.innerHTML = YEARS.map((y,i)=>{
+    const active = filters.year.has(y);
+    return '<button type="button" class="legend-btn" style="width:auto;padding:5px 10px" data-year="'+y+'" aria-pressed="'+active+'">'
+      + '<span>'+y+'</span></button>';
+  }).join('');
+  el.querySelectorAll('button[data-year]').forEach(b=>{
+    b.addEventListener('click', ()=> toggleFilter('year', Number(b.dataset.year)));
+  });
+}
+
+function renderFunnel(rows){
+  const agg = aggregate(rows, r=>r.locationType, LOCATION_TYPES)
+    .map(a=>({ ...a, val: metricValue(a, selectedMetric) }))
+    .sort((a,b)=> b.val - a.val);
+  const max = Math.max(1, ...agg.map(a=>a.val));
+  const el = document.getElementById('funnelWrap');
+  el.innerHTML = agg.map(a=>{
+    const pct = Math.max(4, Math.round((a.val/max)*100));
+    const active = filters.locationType.has(a.key);
+    const dim = filters.locationType.size>0 && !active;
+    return '<button type="button" class="funnel-row'+(dim?' dim':'')+'" data-val="'+a.key+'" aria-pressed="'+active+'">'
+      + '<div class="flex items-center justify-between mb-1"><span class="text-xs font-bold">'+a.key+'</span><span class="text-xs font-extrabold tnum">'+fmtMetric(selectedMetric, a.val)+'</span></div>'
+      + '<div class="funnel-track"><div class="funnel-fill" style="width:'+pct+'%;background:'+TIER_COLOR[a.key]+'"></div></div>'
+      + '</button>';
+  }).join('');
+  el.querySelectorAll('button[data-val]').forEach(b=>{
+    b.addEventListener('click', ()=> toggleFilter('locationType', b.dataset.val));
+  });
+}
+
+let pivotSort = { key:'sales', dir:-1 };
+function renderPivot(rows){
+  let agg = aggregate(rows, r=>r.outletType, OUTLET_TYPES).map((a,i)=>({...a, outletType: OUTLET_TYPES[i]}));
+  agg.sort((a,b)=>{
+    const k = pivotSort.key === 'outletType' ? 'outletType' : pivotSort.key;
+    if (k==='outletType') return pivotSort.dir * String(a.outletType).localeCompare(String(b.outletType));
+    return pivotSort.dir * (a[k] - b[k]);
+  });
+
+  const body = document.getElementById('pivotBody');
+  body.innerHTML = agg.map(a=>{
+    const selected = filters.outletType.has(a.outletType);
+    return '<tr class="'+(selected?'selected':'')+'">'
+      + '<td><button type="button" class="row-btn" data-outlet-type="'+a.outletType+'" aria-pressed="'+selected+'">'
+        + '<span class="type-dot" style="background:'+COLORS.green+'"></span>'+OUTLET_TYPE_LABEL[a.outletType]+'</button></td>'
+      + '<td class="tnum">'+fmtINR.format(a.sales)+'</td>'
+      + '<td class="tnum">'+fmtNum.format(a.count)+'</td>'
+      + '<td class="tnum">'+fmtINR2.format(a.avgSales)+'</td>'
+      + '<td class="tnum">'+a.rating.toFixed(2)+'</td>'
+      + '<td class="tnum">'+(a.visibility*100).toFixed(2)+'%</td>'
+      + '</tr>';
+  }).join('');
+
+  const totalSales = agg.reduce((s,a)=>s+a.sales,0);
+  const totalCount = agg.reduce((s,a)=>s+a.count,0);
+  const totalRatingW = agg.reduce((s,a)=>s+a.rating*a.count,0);
+  const totalVisW = agg.reduce((s,a)=>s+a.visibility*a.count,0);
+  const foot = document.getElementById('pivotFoot');
+  foot.innerHTML = '<tr>'
+    + '<td>Total</td>'
+    + '<td class="tnum">'+fmtINR.format(totalSales)+'</td>'
+    + '<td class="tnum">'+fmtNum.format(totalCount)+'</td>'
+    + '<td class="tnum">'+(totalCount? fmtINR2.format(totalSales/totalCount) : '&mdash;')+'</td>'
+    + '<td class="tnum">'+(totalCount? (totalRatingW/totalCount).toFixed(2) : '&mdash;')+'</td>'
+    + '<td class="tnum">'+(totalCount? (totalVisW/totalCount*100).toFixed(2)+'%' : '&mdash;')+'</td>'
+    + '</tr>';
+
+  body.querySelectorAll('button[data-outlet-type]').forEach(b=>{
+    b.addEventListener('click', ()=> toggleFilter('outletType', b.dataset.outletType));
+  });
+}
+
+function wirePivotSort(){
+  document.querySelectorAll('#pivotTable thead th[data-sort]').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.dataset.sort;
+      pivotSort.dir = (pivotSort.key===key) ? pivotSort.dir*-1 : -1;
+      pivotSort.key = key;
+      document.querySelectorAll('#pivotTable thead th').forEach(h=>h.removeAttribute('aria-sort'));
+      th.setAttribute('aria-sort', pivotSort.dir===1 ? 'ascending' : 'descending');
+      render();
+    });
+  });
+}
+
+function renderSidebarCounts(rows){
+  // Show item counts per option so the sidebar communicates scale, computed from full dataset context (not double-filtered by own dimension)
+  function countsFor(dim, options, valueOfRow){
+    const others = DATA.filter(d=>
+      (dim==='locationType' || filters.locationType.size===0 || filters.locationType.has(d.locationType)) &&
+      (dim==='outletSize' || filters.outletSize.size===0 || filters.outletSize.has(d.outletSize)) &&
+      (dim==='itemType' || filters.itemType.size===0 || filters.itemType.has(d.itemType))
+    );
+    const map = new Map(options.map(o=>[o,0]));
+    others.forEach(d=>{ const k = valueOfRow(d); if(map.has(k)) map.set(k, map.get(k)+d.count); });
+    return map;
+  }
+  const locC = countsFor('locationType', LOCATION_TYPES, d=>d.locationType);
+  const sizeC = countsFor('outletSize', OUTLET_SIZES, d=>d.outletSize);
+  const itemC = countsFor('itemType', ITEM_TYPES, d=>d.itemType);
+  [['locationType',locC],['outletSize',sizeC],['itemType',itemC]].forEach(([dim,map])=>{
+    map.forEach((v,k)=>{
+      document.querySelectorAll('[data-count-for="'+dim+'::'+k+'"]').forEach(el=> el.textContent = fmtNum.format(v));
+    });
+  });
+}
+
+function renderChips(){
+  const chips = [];
+  Object.entries(filters).forEach(([dim, set])=>{
+    set.forEach(val=>{
+      const label = dim==='outletType' ? OUTLET_TYPE_LABEL[val] : val;
+      chips.push({dim, val, text: DIM_LABEL[dim]+': '+label});
+    });
+  });
+  if (selectedMetric !== 'sales') chips.push({dim:'__metric', val:selectedMetric, text:'Metric: '+METRICS.find(m=>m.key===selectedMetric).label});
+
+  const el = document.getElementById('chipsRow');
+  if (!chips.length){ el.innerHTML = '<p class="text-xs text-brand-ink/70">No filters applied &mdash; showing all 8,523 orders</p>'; return; }
+  el.innerHTML = chips.map(c=>
+    '<span class="chip">'+c.text+'<button type="button" data-dim="'+c.dim+'" data-val="'+c.val+'" aria-label="Remove filter '+c.text+'">'
+    + '<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button></span>'
+  ).join('') + (chips.length>1 ? '<button type="button" id="clearAllChip" class="text-xs font-bold text-brand-ink/70 underline underline-offset-2 hover:text-brand-ink ml-1">Clear all</button>' : '');
+
+  el.querySelectorAll('button[data-dim]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      if (b.dataset.dim==='__metric'){ selectedMetric='sales'; render(); return; }
+      toggleFilter(b.dataset.dim, isFinite(b.dataset.val) && b.dataset.dim==='year' ? Number(b.dataset.val) : b.dataset.val);
+    });
+  });
+  const clearAll = document.getElementById('clearAllChip');
+  if (clearAll) clearAll.addEventListener('click', clearAllFilters);
+}
+
+/* ======================= MOBILE DRAWER ======================= */
+function wireDrawer(){
+  const drawer = document.getElementById('filterDrawer');
+  const backdrop = document.getElementById('drawerBackdrop');
+  const openBtn = document.getElementById('mobileFilterBtn');
+  const closeBtn = document.getElementById('closeDrawerBtn');
+  function open(){
+    drawer.classList.remove('-translate-x-full');
+    backdrop.classList.remove('hidden'); requestAnimationFrame(()=>backdrop.classList.remove('opacity-0'));
+    openBtn.setAttribute('aria-expanded','true');
+    closeBtn.focus();
+  }
+  function close(){
+    drawer.classList.add('-translate-x-full');
+    backdrop.classList.add('opacity-0');
+    setTimeout(()=>backdrop.classList.add('hidden'), 200);
+    openBtn.setAttribute('aria-expanded','false');
+    openBtn.focus();
+  }
+  openBtn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  backdrop.addEventListener('click', close);
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !drawer.classList.contains('-translate-x-full')) close(); });
+}
+
+/* ======================= INIT ======================= */
+function init(){
+  buildAllFilterGroups(document.getElementById('sidebarFilterGroups'), 'sb');
+  buildAllFilterGroups(document.getElementById('drawerFilterGroups'), 'dw');
+  wireFilterGroup(document.getElementById('sidebarFilterGroups'));
+  wireFilterGroup(document.getElementById('drawerFilterGroups'));
+  buildMetricSeg();
+  wirePivotSort();
+  wireDrawer();
+  initCharts();
+  document.getElementById('resetBtn').addEventListener('click', clearAllFilters);
+  document.getElementById('emptyResetBtn').addEventListener('click', clearAllFilters);
+  render();
+  if (window.lucide) lucide.createIcons();
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
