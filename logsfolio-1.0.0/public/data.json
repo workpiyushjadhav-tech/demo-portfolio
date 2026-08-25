@@ -31,9 +31,9 @@
     }
   },
   "personalInfo": {
-    "name": "Arif Hossain",
-    "title": "Full Stack Developer",
-    "location": "Dhaka, Bangladesh",
+    "name": "Shraddha Kothe",
+    "title": "Data Analyst",
+    "location": "Kalyan, Maharashtra",
     "bio": "I am a passionate full-stack developer with a strong background in building modern, scalable web applications. Lets collaborate andbring your ideas to life."
   },
   "contactInfo": {
@@ -83,7 +83,7 @@
         "Chart.js",
         "Vanilla JS"
       ],
-      "live_url": "#!",
+      "live_url": "/blinkit_dashboard.html",
       "code_repo_url": "#!",
       "cover": "/assets/project_4.jpeg"
     },
