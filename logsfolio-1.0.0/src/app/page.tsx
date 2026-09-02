@@ -1,3 +1,20 @@
+// 1. Import the component at the top of src/app/page.tsx
+import { PowerBiDashboard } from '@/components/PowerBiDashboard';
+
+export default function Page() {
+  return (
+    <main className="container mx-auto px-4 py-8">
+      {/* Existing components (Navbar, Intro, Projects Grid, etc.) */}
+      
+      <hr className="my-12 border-muted" />
+
+      {/* 2. Place your new Power BI dashboard component here */}
+      <PowerBiDashboard />
+
+      {/* Existing components (Footer, etc.) */}
+    </main>
+  );
+}
 /* eslint-disable @next/next/no-img-element */
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
