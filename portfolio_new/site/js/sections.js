@@ -5,19 +5,19 @@
     {
       name: 'Scott Brothers',
       role: 'Lead Animator, Twinkl Educational Publishing',
-      avatar: 'images/1516259780447.jpeg',
+      avatar: 'images/1516259780447.avif',
       text: "I worked with Piyush for a couple of years as his Design Manager on ALEKS Adventure, a visual math product for the K-3 market. I was impressed by his diligence and thoughtfulness as a visual designer. From the start of the project I was able to count on his quality output and timely deliveries. Piyush primarily focused on topic background work, but also contributed to larger scale game maps. Piyush absorbed feedback, provided his own ideas, and was always highly collaborative with his design teammates. In meetings he was candid in a positive way and asked questions if requirements were not clear. As a manager, I appreciated his dedication to open communication. I enjoyed working with Piyush and he would be a great addition to any design team."
     },
     {
       name: 'Kedar Ambatkar',
       role: 'Design Lead, Zeus Learning',
-      avatar: 'images/1787631899048.png',
+      avatar: 'images/1787631899048.avif',
       text: "I had the pleasure of working with Piyush for over two years, and during that time, he consistently demonstrated creativity, punctuality, and a deep sense of commitment to his work. His strong skills in UI design and data visualization stood out in every project we collaborated on. Piyush is not only technically sound but also a loyal and dependable teammate who brings great value to any design team."
     },
     {
       name: 'Vinicia Dsouza',
       role: 'Senior UI Designer, Zeus Learning',
-      avatar: 'images/1788888423791.png',
+      avatar: 'images/1788888423791.avif',
       text: "Working with Piyush was one of the highlights of my time on the team. He consistently brought creative, well-thought-out ideas to the table and more importantly, he followed through with strong execution. His designs were not only innovative but also grounded in user needs and project goals. Piyush was especially dependable during high-pressure situations. He stayed calm, focused, and handled challenges with confidence and clarity, which made a big difference when deadlines were tight. As a teammate, he was approachable, open to discussion, and very easy to collaborate with. Even when we had differing opinions, working through ideas was seamless as we always found common ground without any friction. Piyush is not just a talented designer but also a true team player. He brought both skill and a great attitude to the table. I’d be happy to recommend him and would gladly work with him again in the future."
     }
   ];
