@@ -268,12 +268,11 @@ body {
   transition: transform .4s var(--ease-spring);
   cursor: pointer; overflow: hidden;
 }
-.logo-mask {
-  display: block; width: 100%; height: 100%;
-  background-color: var(--ink);          /* dark in light mode, cream in dark mode */
-  -webkit-mask: url("../images/logo-vector.svg") center / contain no-repeat;
-          mask: url("../images/logo-vector.svg") center / contain no-repeat;
-}
+.logo-stack { position: relative; display: block; width: 100%; height: 100%; }
+.logo-stack img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.logo-backdrop { opacity: 0; transition: opacity .35s ease; }
+html[data-theme="dark"] .logo-backdrop { opacity: 1; }
+
 .hero-photo-inline:hover { transform: rotate(4deg) scale(1.1); }
 .hero-photo-tape {
   position: absolute; top: -10px; left: 50%; transform: translateX(-50%) rotate(-4deg);
