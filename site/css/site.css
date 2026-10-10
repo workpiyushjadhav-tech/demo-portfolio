@@ -908,7 +908,7 @@ html[data-theme="dark"][data-a11y-contrast] {
 /* surfaces that are always "paper" (polaroids) stay light so photos keep their frame */
 html[data-theme="dark"] .about-photo-card { background: #EFE8DA; }
 html[data-theme="dark"] .about-photo-caption { color: #675F50; }
-html[data-theme="dark"] .about-photo-card.img-missing::before { background: #E4DAC4; color: #221E17; }
+html[data-theme="dark"] :is(.cs-main img, .testimonial-avatar img, .testimonial-modal-avatar img) { filter: brightness(.9); }
 /* texture and imagery */
 html[data-theme="dark"] #grain { opacity: .22; mix-blend-mode: screen; }
 html[data-theme="dark"] .card-image img { filter: saturate(.94) brightness(.9); }
