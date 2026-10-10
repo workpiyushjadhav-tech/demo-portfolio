@@ -271,8 +271,8 @@ body {
 .logo-mask {
   display: block; width: 100%; height: 100%;
   background-color: var(--ink);          /* dark in light mode, cream in dark mode */
-  -webkit-mask: url("../images/logo.svg") center / contain no-repeat;
-          mask: url("../images/logo.svg") center / contain no-repeat;
+  -webkit-mask: url("../images/logo-vector.svg") center / contain no-repeat;
+          mask: url("../images/logo-vector.svg") center / contain no-repeat;
 }
 .hero-photo-inline:hover { transform: rotate(4deg) scale(1.1); }
 .hero-photo-tape {
